@@ -1986,4 +1986,18 @@ shV23RenderComments=async function(scriptId){
 };
 
 </script>
+<script>
+
+/* Keep public creator cards in sync with the profile editor metadata. */
+const sh43OriginalProfileSave=$("sh4ProfileSave").onclick;
+$("sh4ProfileSave").onclick=async()=>{
+ await sh43OriginalProfileSave();
+ if(!user)return;
+ const meta=user.user_metadata||{};
+ const profile={id:user.id,username:meta.username||meta.display_name||user.email?.split("@")[0]||"Creator",display_name:meta.display_name||meta.username||"Creator",avatar_url:meta.avatar_url||null};
+ const saved=await db.from("profiles").upsert(profile,{onConflict:"id"});
+ if(saved.error)toast("Profile saved, but public creator card sync failed: "+saved.error.message);
+};
+
+</script>
 </body></html>
