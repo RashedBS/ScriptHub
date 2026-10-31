@@ -484,3 +484,15 @@ with check (
 
 grant select, insert, update, delete on public.comments to authenticated;
 grant select on public.comments to anon;
+
+
+-- ScriptHub 4.3 public creator profiles (safe additive migration).
+alter table public.profiles add column if not exists display_name text;
+alter table public.profiles add column if not exists avatar_url text;
+alter table public.profiles enable row level security;
+drop policy if exists "Profiles are publicly readable" on public.profiles;
+create policy "Profiles are publicly readable" on public.profiles for select to anon,authenticated using (true);
+drop policy if exists "Users update own profile" on public.profiles;
+create policy "Users update own profile" on public.profiles for update to authenticated using (auth.uid()=id) with check (auth.uid()=id);
+grant select on public.profiles to anon,authenticated;
+grant update on public.profiles to authenticated;
