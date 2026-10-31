@@ -387,3 +387,30 @@ for all using (
 );
 grant select,insert,update,delete on public.saved_playlists,saved_playlist_items to authenticated;
 create index if not exists saved_playlist_items_playlist_idx on public.saved_playlist_items(playlist_id,created_at desc);
+
+
+-- ScriptHub 4.0: public avatar storage for user-selected profile pictures.
+insert into storage.buckets (id,name,public,file_size_limit,allowed_mime_types)
+values ('avatars','avatars',true,4194304,array['image/jpeg','image/png','image/webp','image/gif'])
+on conflict (id) do update set public=true,file_size_limit=4194304,allowed_mime_types=array['image/jpeg','image/png','image/webp','image/gif'];
+
+drop policy if exists "Users upload own avatar" on storage.objects;
+create policy "Users upload own avatar" on storage.objects
+for insert to authenticated
+with check (bucket_id='avatars' and (storage.foldername(name))[1]=auth.uid()::text);
+
+drop policy if exists "Users update own avatar" on storage.objects;
+create policy "Users update own avatar" on storage.objects
+for update to authenticated
+using (bucket_id='avatars' and (storage.foldername(name))[1]=auth.uid()::text)
+with check (bucket_id='avatars' and (storage.foldername(name))[1]=auth.uid()::text);
+
+drop policy if exists "Users delete own avatar" on storage.objects;
+create policy "Users delete own avatar" on storage.objects
+for delete to authenticated
+using (bucket_id='avatars' and (storage.foldername(name))[1]=auth.uid()::text);
+
+drop policy if exists "Anyone can view avatars" on storage.objects;
+create policy "Anyone can view avatars" on storage.objects
+for select to public
+using (bucket_id='avatars');
