@@ -680,6 +680,19 @@ $("scriptGrid").addEventListener("click",e=>{
 });
 /* Always open the custom confirmation UI; no native browser confirm/alert/prompt. */
 
+/* Keep the search input and navigation wired to the latest folder-aware renderer. */
+$("search").oninput=()=>shRender();
+document.querySelectorAll(".navbtn").forEach(b=>b.addEventListener("click",()=>{
+ shFolderFilter=null;
+ if(b.dataset.view!=="mine")$("folderWorkspace")?.remove();
+},true));
+const shShowScriptCurrent=showScript;
+showScript=async function(id){
+ $("shScriptActions")?.remove();
+ return shShowScriptCurrent(id);
+};
+
+
 </script>
 
 </body></html>
