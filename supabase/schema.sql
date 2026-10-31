@@ -414,3 +414,28 @@ drop policy if exists "Anyone can view avatars" on storage.objects;
 create policy "Anyone can view avatars" on storage.objects
 for select to public
 using (bucket_id='avatars');
+
+
+-- ScriptHub 4.1: make comment posting/editing permissions explicit and repair grants.
+-- Public scripts accept comments from signed-in users; replies must belong to the same script.
+drop policy if exists "Signed-in users comment on visible scripts" on public.comments;
+drop policy if exists "ScriptHub signed-in comment and reply" on public.comments;
+drop policy if exists "ScriptHub 4.1 insert comments and replies" on public.comments;
+create policy "ScriptHub 4.1 insert comments and replies" on public.comments
+for insert to authenticated
+with check (
+ auth.uid() = user_id
+ and exists(select 1 from public.scripts s where s.id=comments.script_id and s.visibility='public')
+ and (parent_id is null or exists(select 1 from public.comments p where p.id=comments.parent_id and p.script_id=comments.script_id))
+);
+drop policy if exists "ScriptHub users edit own comments" on public.comments;
+create policy "ScriptHub users edit own comments" on public.comments
+for update to authenticated using (auth.uid()=user_id) with check (auth.uid()=user_id);
+drop policy if exists "ScriptHub authors and post owners delete comments" on public.comments;
+create policy "ScriptHub authors and post owners delete comments" on public.comments
+for delete to authenticated using (
+ auth.uid()=user_id or exists(select 1 from public.scripts s where s.id=comments.script_id and s.owner_id=auth.uid())
+);
+grant select,insert,update,delete on public.comments to authenticated;
+grant select on public.comments to anon;
+grant select,insert,delete on public.comment_likes to authenticated;
