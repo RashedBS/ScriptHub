@@ -93,3 +93,58 @@ grant select on public.scripts to anon, authenticated;
 grant insert, update, delete on public.scripts to authenticated;
 grant select, insert, delete on public.comments to authenticated;
 grant select, insert, delete on public.script_likes to authenticated;
+
+
+-- Folders, nested replies, and likes for folders/comments.
+create table if not exists public.folders (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  name text not null check (char_length(name) between 1 and 50),
+  description text not null default '' check (char_length(description) <= 160),
+  created_at timestamptz not null default now(),
+  unique(owner_id, name)
+);
+alter table public.scripts add column if not exists folder_id uuid references public.folders(id) on delete set null;
+alter table public.comments add column if not exists parent_id uuid references public.comments(id) on delete cascade;
+create table if not exists public.comment_likes (
+  comment_id uuid not null references public.comments(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key(comment_id,user_id)
+);
+create table if not exists public.folder_likes (
+  folder_id uuid not null references public.folders(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key(folder_id,user_id)
+);
+create index if not exists folders_owner_idx on public.folders(owner_id);
+create index if not exists scripts_folder_idx on public.scripts(folder_id);
+create index if not exists comments_parent_idx on public.comments(parent_id,created_at);
+alter table public.folders enable row level security;
+alter table public.comment_likes enable row level security;
+alter table public.folder_likes enable row level security;
+drop policy if exists "Public folders or own folders are readable" on public.folders;
+create policy "Public folders or own folders are readable" on public.folders for select using (exists(select 1 from public.scripts s where s.folder_id=id and s.visibility='public') or auth.uid()=owner_id);
+drop policy if exists "Users create own folders" on public.folders;
+create policy "Users create own folders" on public.folders for insert with check(auth.uid()=owner_id);
+drop policy if exists "Users update own folders" on public.folders;
+create policy "Users update own folders" on public.folders for update using(auth.uid()=owner_id) with check(auth.uid()=owner_id);
+drop policy if exists "Users delete own folders" on public.folders;
+create policy "Users delete own folders" on public.folders for delete using(auth.uid()=owner_id);
+drop policy if exists "Users like visible comments" on public.comment_likes;
+create policy "Users like visible comments" on public.comment_likes for select using(exists(select 1 from public.comments c join public.scripts s on s.id=c.script_id where c.id=comment_id and (s.visibility='public' or s.owner_id=auth.uid())));
+drop policy if exists "Users add comment likes" on public.comment_likes;
+create policy "Users add comment likes" on public.comment_likes for insert with check(auth.uid()=user_id and exists(select 1 from public.comments c join public.scripts s on s.id=c.script_id where c.id=comment_id and s.visibility='public'));
+drop policy if exists "Users remove comment likes" on public.comment_likes;
+create policy "Users remove comment likes" on public.comment_likes for delete using(auth.uid()=user_id);
+drop policy if exists "Users like visible folders" on public.folder_likes;
+create policy "Users like visible folders" on public.folder_likes for select using(exists(select 1 from public.folders f where f.id=folder_id and (f.owner_id=auth.uid() or exists(select 1 from public.scripts s where s.folder_id=f.id and s.visibility='public'))));
+drop policy if exists "Users add folder likes" on public.folder_likes;
+create policy "Users add folder likes" on public.folder_likes for insert with check(auth.uid()=user_id and exists(select 1 from public.folders f where f.id=folder_id and f.owner_id<>auth.uid() and exists(select 1 from public.scripts s where s.folder_id=f.id and s.visibility='public')));
+drop policy if exists "Users remove folder likes" on public.folder_likes;
+create policy "Users remove folder likes" on public.folder_likes for delete using(auth.uid()=user_id);
+drop policy if exists "Users reply on visible scripts" on public.comments;
+create policy "Users reply on visible scripts" on public.comments for insert with check(auth.uid()=user_id and exists(select 1 from public.scripts s where s.id=script_id and (s.visibility='public' or s.owner_id=auth.uid())));
+grant select,insert,update,delete on public.folders to authenticated;
+grant select,insert,delete on public.comment_likes, public.folder_likes to authenticated;
