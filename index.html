@@ -1232,6 +1232,191 @@ like=async function(){
 $("likeBtn").onclick=like;
 
 
+
+/* ScriptHub v2.3 — final control, layout and social repair */
+const shV23=document.createElement("style");
+shV23.textContent=`
+/* Native browser select popups are disabled: visible controls are our custom buttons. */
+#editModal select.sh-native-hidden{display:none!important;visibility:hidden!important;position:absolute!important;pointer-events:none!important}
+#editModal .sh-select{display:block!important;position:relative;width:100%;min-width:0;grid-column:1/-1}
+#editModal .sh-select-trigger{display:flex!important;width:100%;min-height:54px;align-items:center;justify-content:space-between;gap:12px;padding:12px 15px;background:#080e18;border:1px solid #2a3a53;border-radius:11px;color:#e8effc;font-size:14px;text-align:left}
+#editModal .sh-select-menu{display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:9999;max-height:230px;overflow:auto;padding:6px;background:#0b1421;border:1px solid #344c70;border-radius:12px;box-shadow:0 20px 55px #000e}
+#editModal .sh-select-menu.open{display:grid;gap:4px}
+#editModal .sh-select-option{display:flex;width:100%;justify-content:space-between;padding:12px;background:transparent;border:0;border-radius:8px;color:#e6eefb;text-align:left}
+#editModal .sh-select-option[aria-selected=true],#editModal .sh-select-option:active{background:#1a2d49;color:#fff}
+#editModal .row:has(#scriptType){display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
+#editModal .row:has(#scriptType)>.field{min-width:0!important;width:100%!important}
+#editModal .field:has(#scriptFolderSelect){grid-column:1/-1!important;width:100%!important}
+#editModal .CodeMirror{width:100%;height:clamp(280px,48vh,560px)}
+/* Desktop scale: centered application shell, balanced editor and two-column content. */
+@media(min-width:900px){
+ .wrap{max-width:1320px;padding:48px 34px 80px}
+ .layout{grid-template-columns:235px minmax(0,1fr);gap:26px}
+ .side{position:sticky;top:90px;align-self:start}
+ .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+ .hero{padding:46px 50px;min-height:280px}
+ .hero h1{font-size:58px}
+ .modalbox{width:min(920px,calc(100vw - 80px))}
+}
+@media(min-width:1450px){.wrap{max-width:1400px}.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* Mobile layout never overflows horizontally. */
+@media(max-width:600px){
+ #editModal .modalbox{width:calc(100vw - 18px);padding:15px}
+ #editModal .row:has(#scriptType){grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+ #editModal .row:has(#scriptType) .field{margin:8px 0}
+ #editModal .sh-select-trigger{min-height:50px;font-size:13px}
+ #editModal .CodeMirror{height:300px}
+}
+/* Liked states are unmistakably red across posts, comments, folders and replies. */
+.is-liked,.social-btn.is-liked,#likeBtn.is-liked{color:#ff526d!important;background:#35121f!important;border:1px solid #a33a55!important;box-shadow:0 0 0 1px #ff526d18,0 4px 15px #ff31501c!important}
+.is-liked:hover,.social-btn.is-liked:hover{background:#491728!important;color:#ff8295!important}
+.social-btn{border:1px solid #293951;background:#0d1725;color:#c7d4e8;border-radius:9px;padding:8px 11px}
+#comments{display:grid;gap:9px}
+#comments .comment{padding:12px;border:1px solid #223149;border-radius:11px;background:#0a111c}
+#comments .reply-list{margin:10px 0 0 12px;padding-left:12px;border-left:2px solid #30496d}
+#comments .reply-form{display:flex;gap:8px;margin-top:10px}
+#comments .reply-form input{flex:1;min-width:0;background:#080e18;border:1px solid #2a3b55;border-radius:9px;padding:10px;color:#edf3ff}
+.comment-delete{color:#ff8999!important}
+.public-collections{display:block!important;margin:0 0 16px;padding:15px;border:1px solid #25364f;border-radius:13px;background:#0a111c}
+.public-collections:empty{display:none!important}
+`;
+document.head.appendChild(shV23);
+/* Rebuild the editor's select controls as custom accessible menus after each open. */
+function shV23CustomizeEditor(){
+ const modalBox=$("editModal").querySelector(".modalbox");
+ ["scriptType","scriptVisibility"].forEach(id=>{
+  const select=$(id);if(!select)return;
+  let wrap=select.nextElementSibling;
+  if(!wrap?.classList.contains("sh-select")){
+   select.classList.add("sh-native-hidden");
+   wrap=document.createElement("div");wrap.className="sh-select";
+   const trigger=document.createElement("button");trigger.type="button";trigger.className="sh-select-trigger";trigger.setAttribute("aria-haspopup","listbox");trigger.setAttribute("aria-expanded","false");
+   const menu=document.createElement("div");menu.className="sh-select-menu";menu.setAttribute("role","listbox");
+   wrap.append(trigger,menu);select.insertAdjacentElement("afterend",wrap);
+   const render=()=>{
+    trigger.innerHTML='<span>'+esc(select.options[select.selectedIndex]?.text||select.value)+'</span><span>⌄</span>';
+    menu.innerHTML=[...select.options].map(o=>'<button type="button" class="sh-select-option" role="option" data-v="'+esc(o.value)+'" aria-selected="'+(o.value===select.value)+'"><span>'+esc(o.text)+'</span><span>'+(o.value===select.value?"✓":"")+'</span></button>').join("");
+    menu.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{select.value=b.dataset.v;select.dispatchEvent(new Event("change",{bubbles:true}));render();menu.classList.remove("open");trigger.setAttribute("aria-expanded","false")});
+   };
+   trigger.onclick=()=>{const open=menu.classList.toggle("open");trigger.setAttribute("aria-expanded",String(open))};
+   document.addEventListener("click",e=>{if(!wrap.contains(e.target)){menu.classList.remove("open");trigger.setAttribute("aria-expanded","false")}});
+   select._shRender=render;
+  }
+  select.classList.add("sh-native-hidden");select._shRender?.();
+ });
+ const typeRow=$("scriptType")?.closest(".row");
+ const folder=$("scriptFolderSelect")?.closest(".field");
+ if(typeRow&&folder){folder.remove();typeRow.insertAdjacentElement("afterend",folder)}
+}
+const shV23OpenEditor=openEditor;
+openEditor=function(s){shV23OpenEditor(s);shV23CustomizeEditor()};
+$("scriptType").addEventListener("change",()=>{$("scriptType")._shRender?.()});
+$("scriptVisibility").addEventListener("change",()=>{$("scriptVisibility")._shRender?.()});
+/* Public folder collections are visible in Discover/All as well as in the owner's library. */
+async function shV23PublicCollections(){
+ const host=$("publicCollections");
+ if(!host||view!=="discover"){host?.remove();return}
+ const fr=await db.from("folders").select("id,name,description,owner_id").order("created_at",{ascending:false});
+ if(fr.error){host.innerHTML='<h3>Public folders</h3><p class="note">Could not load folders: '+esc(fr.error.message)+'</p>';return}
+ const packs=[];
+ for(const folder of (fr.data||[])){
+  const sr=await db.from("scripts").select("id,title,script_type,description,created_at").eq("folder_id",folder.id).eq("visibility","public").order("created_at",{ascending:false});
+  if(!sr.error&&sr.data?.length)packs.push({folder,scripts:sr.data});
+ }
+ if(!packs.length){host.innerHTML="";return}
+ host.innerHTML='<h3>📚 Public folders</h3><p class="note">Explore scripts grouped into creator collections.</p>'+packs.map(({folder,scripts:items})=>'<section class="public-collection"><button type="button" class="public-collection-head"><span>📁</span><strong>'+esc(folder.name)+'</strong><span>'+items.length+' scripts</span><span>⌄</span></button><div class="public-collection-body">'+items.map(s=>'<div class="public-collection-script"><span>📄 '+esc(s.title)+' <small>· '+esc(s.script_type)+'</small></span><button type="button" class="btn small primary" data-v23-open="'+s.id+'">Open</button></div>').join("")+'</div></section>').join("");
+ host.querySelectorAll(".public-collection-head").forEach(b=>b.onclick=()=>b.parentElement.classList.toggle("open"));
+ host.querySelectorAll("[data-v23-open]").forEach(b=>b.onclick=()=>showScript(b.dataset.v23Open));
+}
+const shV23Load=shLoad;
+shLoad=async function(){await shV23Load();if(view==="discover")await shV23PublicCollections();else $("publicCollections")?.remove()};
+$("refreshBtn").onclick=async()=>{await shLoad();toast("Refreshed.")};
+/* Wire post likes to both the detail button and cards, with red liked-state rendering. */
+$("likeBtn").onclick=async()=>{
+ if(!user){toast("Sign in to like posts.");modal("authModal");return}
+ if(!selected?.id)return;
+ const check=await db.from("script_likes").select("script_id").eq("script_id",selected.id).eq("user_id",user.id).maybeSingle();
+ if(check.error)return toast(check.error.message);
+ const res=check.data?await db.from("script_likes").delete().eq("script_id",selected.id).eq("user_id",user.id):await db.from("script_likes").insert({script_id:selected.id,user_id:user.id});
+ if(res.error)return toast(res.error.message);
+ shSound("like");await showScript(selected.id);await shLoad();
+};
+/* Comments and replies: visible submit controls, reliable parent IDs, per-item likes and delete. */
+async function shV23CommentSubmit(body,parentId){
+ if(!user){toast("Sign in to comment or reply.");modal("authModal");return}
+ if(!selected?.id)return toast("Open a script first.");
+ body=String(body||"").trim();if(!body)return toast("Write a comment first.");
+ const result=await db.from("comments").insert({script_id:selected.id,user_id:user.id,body,parent_id:parentId||null});
+ if(result.error){toast("Could not post: "+result.error.message);return}
+ if(!parentId)$("commentText").value="";
+ toast(parentId?"Reply posted!":"Comment posted!");shSound("success");await shV23RenderComments(selected.id);
+}
+async function shV23RenderComments(scriptId){
+ const r=await db.from("comments").select("id,body,created_at,user_id,parent_id").eq("script_id",scriptId).order("created_at",{ascending:true});
+ if(r.error){$("comments").innerHTML='<p class="note">Comments unavailable: '+esc(r.error.message)+'</p>';return}
+ const rows=r.data||[],ids=rows.map(x=>x.id);
+ const l=ids.length?await db.from("comment_likes").select("comment_id,user_id").in("comment_id",ids):{data:[],error:null};
+ if(l.error){$("comments").innerHTML='<p class="note">Comment likes unavailable: '+esc(l.error.message)+'</p>';return}
+ $("comments").innerHTML=rows.length?shCommentTree(rows,l.data||[]):'<p class="note">No comments yet. Be the first to start the conversation.</p>';
+ $("comments").querySelectorAll("[data-reply]").forEach(b=>b.onclick=()=>{
+  if(!user){toast("Sign in to reply.");modal("authModal");return}
+  const parent=b.closest(".comment");let form=parent.querySelector(":scope > .reply-form");
+  if(form){form.remove();return}
+  form=document.createElement("div");form.className="reply-form";
+  form.innerHTML='<input maxlength="500" placeholder="Write a reply…" aria-label="Write a reply"><button class="btn small primary" type="button">Send reply</button>';
+  parent.appendChild(form);form.querySelector("button").onclick=()=>shV23CommentSubmit(form.querySelector("input").value,b.dataset.reply);
+ });
+ $("comments").querySelectorAll("[data-comment-like]").forEach(b=>b.onclick=async()=>{
+  if(!user){toast("Sign in to like comments.");modal("authModal");return}
+  const id=b.dataset.commentLike,ck=await db.from("comment_likes").select("comment_id").eq("comment_id",id).eq("user_id",user.id).maybeSingle();
+  if(ck.error)return toast(ck.error.message);
+  const res=ck.data?await db.from("comment_likes").delete().eq("comment_id",id).eq("user_id",user.id):await db.from("comment_likes").insert({comment_id:id,user_id:user.id});
+  if(res.error)return toast(res.error.message);
+  shSound("like");await shV23RenderComments(scriptId);
+ });
+ $("comments").querySelectorAll("[data-comment]").forEach(node=>{
+  const id=node.dataset.comment;
+  if(node.querySelector(".comment-delete"))return;
+  const head=node.querySelector(".comment-head");
+  if(head&&user&&rows.find(x=>x.id===id)?.user_id===user.id){
+   const del=document.createElement("button");del.type="button";del.className="social-btn comment-delete";del.textContent="Delete";
+   del.onclick=async()=>{
+    if(!confirm("Delete this comment and its replies?"))return;
+    const res=await db.from("comments").delete().eq("id",id).eq("user_id",user.id);
+    if(res.error)return toast(res.error.message);
+    toast("Comment deleted.");await shV23RenderComments(scriptId);
+   };head.appendChild(del);
+  }
+ });
+}
+showScript=async function(id){
+ let s=scripts.find(x=>x.id===id);
+ if(!s){const r=await db.from("scripts").select("id,title,description,script_type,visibility,code,owner_id,created_at,folder_id").eq("id",id).maybeSingle();if(r.error||!r.data)return toast("Could not open this script.");s=r.data}
+ selected=s;$("viewTitle").textContent=s.title;$("viewDescription").textContent=s.description||"No description provided.";
+ $("viewMeta").textContent=s.script_type+" · "+(s.visibility==="public"?"Public":"Private");$("viewCode").textContent=s.code||"";
+ $("commentText").value="";$("comments").innerHTML='<p class="note">Loading…</p>';modal("viewModal");
+ const [likes,own]=await Promise.all([
+  db.from("script_likes").select("user_id").eq("script_id",id),
+  user?db.from("script_likes").select("script_id").eq("script_id",id).eq("user_id",user.id).maybeSingle():Promise.resolve({data:null,error:null})
+ ]);
+ $("likeBtn").textContent=(own.data?"♥ Liked":"♡ Like")+" · "+(likes.data||[]).length;
+ $("likeBtn").classList.toggle("is-liked",!!own.data);
+ await shV23RenderComments(id);
+};
+shPostComment=shV23CommentSubmit;
+$("postComment").onclick=()=>shV23CommentSubmit($("commentText").value,null);
+/* Card like button handler with red state and fresh count; capture before older listeners. */
+$("scriptGrid").addEventListener("click",async e=>{
+ const b=e.target.closest("[data-post-like]");if(!b)return;
+ e.preventDefault();e.stopImmediatePropagation();
+ if(!user){toast("Sign in to like posts.");modal("authModal");return}
+ const id=b.dataset.postLike,ck=await db.from("script_likes").select("script_id").eq("script_id",id).eq("user_id",user.id).maybeSingle();
+ if(ck.error)return toast(ck.error.message);
+ const res=ck.data?await db.from("script_likes").delete().eq("script_id",id).eq("user_id",user.id):await db.from("script_likes").insert({script_id:id,user_id:user.id});
+ if(res.error)return toast(res.error.message);
+ shSound("like");await shLoad();
+},{capture:true});
+
 /* Refresh public collection cards on first page load and every refresh tap. */
 $("refreshBtn").onclick=async()=>{await shLoad();await shRenderPublicCollections();toast("ScriptHub is up to date.")};
 if(db){shLoad().then(shRenderPublicCollections)}
