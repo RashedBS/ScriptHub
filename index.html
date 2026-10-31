@@ -680,6 +680,120 @@ $("scriptGrid").addEventListener("click",e=>{
 });
 /* Always open the custom confirmation UI; no native browser confirm/alert/prompt. */
 
+
+/* Folder persistence and final dark-blue visual pass */
+const shDeepTheme=document.createElement("style");
+shDeepTheme.textContent=`
+:root{--bg:#05070c!important;--panel:#0a0f18!important;--panel2:#0d1522!important;--line:#1b293c!important;--muted:#8291a8!important;--text:#e9f0fb!important;--blue:#245bb0!important}
+html,body{background:#05070c!important;color:#e9f0fb!important}
+body{background:radial-gradient(ellipse at 50% -30%,#101b30 0,transparent 43%),#05070c!important}
+.top{background:rgba(5,7,12,.97)!important;border-color:#172337!important}
+.hero{background:linear-gradient(125deg,#0b1422,#090e18 72%,#0b1420)!important;border-color:#1c2b40!important;box-shadow:0 18px 55px #0008!important}
+.side,.card,.script,.modalbox,#folderWorkspace{background:#090f19!important;border-color:#1b293c!important;box-shadow:0 12px 32px #0005!important}
+.script:hover{background:#0d1725!important;border-color:#315b91!important}
+.navbtn.active,.tab.active{background:#12294a!important;border:1px solid #285b9a!important;color:#e5efff!important;box-shadow:inset 0 0 0 1px #3d73b344!important}
+.btn.primary,.hero .btn.primary{background:linear-gradient(135deg,#17417a,#205ca8)!important;border:1px solid #326aa9!important;color:#e8f2ff!important;box-shadow:0 6px 18px #0b2b55aa!important}
+.btn.primary:hover{background:linear-gradient(135deg,#20518e,#286bb9)!important}
+.btn,.tab,.social-btn{background:#0b1421!important;border:1px solid #21334c!important;color:#bdcce0!important}
+.btn:hover,.tab:hover,.social-btn:hover{background:#10223a!important;border-color:#32649b!important;color:#f2f7ff!important}
+.btn:focus-visible,.tab:focus-visible,.social-btn:focus-visible{outline:2px solid #3d79bd;outline-offset:2px}
+.search,.field input,.field textarea,.field select,.custom-dialog-card input,.custom-dialog-card textarea{background:#070c14!important;border-color:#1d2c41!important;color:#eaf1fb!important}
+select{color-scheme:dark;appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,#8da5c5 50%),linear-gradient(135deg,#8da5c5 50%,transparent 50%)!important;background-position:calc(100% - 17px) 50%,calc(100% - 12px) 50%!important;background-size:5px 5px,5px 5px!important;background-repeat:no-repeat!important;padding-right:34px!important}
+select option{background:#0a111c!important;color:#eaf1fb!important}
+.pill{background:#0e1b2d!important;border-color:#28476b!important;color:#a9c9f4!important}
+.folder-chip{background:#0a1421!important;border-color:#1e3450!important}
+.folder-chip.selected{background:#10213a!important;border-color:#3269a5!important}
+.sh-confirm-card,.custom-dialog-card{background:#090f19!important;border-color:#28405f!important}
+.delete-btn{background:#211018!important;border-color:#553044!important;color:#f39aaa!important}
+.toast{background:#0e1b2d!important;border-color:#2b4e78!important}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+`;
+document.head.appendChild(shDeepTheme);
+async function shLoad(){
+ if(!requireDb())return;
+ if(view!=="mine")shFolderFilter=null;
+ shFolders=[];
+ if(user){
+  const fr=await db.from("folders").select("id,name,description,owner_id,created_at").eq("owner_id",user.id).order("created_at",{ascending:false});
+  if(fr.error){toast("Folders: "+fr.error.message);return}
+  shFolders=fr.data||[];
+ }
+ if(view==="mine"&&!user){scripts=[];await shRender();shWorkspace();return}
+ let q=db.from("scripts").select("id,title,description,script_type,visibility,code,owner_id,created_at,folder_id").order("created_at",{ascending:false});
+ if(view==="mine")q=q.eq("owner_id",user.id);
+ else if(view==="liked"){
+  if(!user){scripts=[];await shRender();$("folderWorkspace")?.remove();return}
+  const {data:likes,error}=await db.from("script_likes").select("script_id").eq("user_id",user.id);
+  if(error){toast("Likes: "+error.message);return}
+  const ids=(likes||[]).map(x=>x.script_id);
+  if(!ids.length){scripts=[];await shRender();$("folderWorkspace")?.remove();return}
+  q=q.in("id",ids).eq("visibility","public");
+ }else q=q.eq("visibility","public");
+ if(shFolderFilter&&view==="mine")q=q.eq("folder_id",shFolderFilter);
+ if(kind!=="All")q=q.eq("script_type",kind);
+ const {data,error}=await q;
+ if(error){toast("Scripts: "+error.message);return}
+ scripts=data||[];
+ await shRender();
+ if(view==="mine"){shWorkspace();await shRenderFolders()}else $("folderWorkspace")?.remove();
+}
+async function shRender(){
+ const term=$("search").value.trim().toLowerCase();
+ const list=scripts.filter(s=>(s.title+" "+(s.description||"")).toLowerCase().includes(term));
+ const ids=list.map(s=>s.id);
+ const likeResult=ids.length?await db.from("script_likes").select("script_id,user_id").in("script_id",ids):{data:[]};
+ const allLikes=likeResult.data||[];
+ const myLikes=new Set(allLikes.filter(x=>x.user_id===user?.id).map(x=>x.script_id));
+ const folderName=id=>shFolders.find(f=>f.id===id)?.name||"Unfiled";
+ const grid=$("scriptGrid");
+ $("shFolderCurrent")?.remove();
+ if(shFolderFilter&&view==="mine"){
+  const folder=shFolders.find(f=>f.id===shFolderFilter);
+  const notice=document.createElement("div");notice.id="shFolderCurrent";notice.className="sh-folder-current";
+  notice.innerHTML='<span>📁 '+esc(folder?.name||"Folder")+' · '+list.length+' scripts</span><button class="btn small" id="shClearFolder">All scripts</button>';
+  grid.parentElement.insertBefore(notice,grid);
+  $("shClearFolder").onclick=()=>{shFolderFilter=null;shLoad()};
+ }
+ grid.innerHTML=list.length?list.map(s=>{
+  const count=allLikes.filter(x=>x.script_id===s.id).length,liked=myLikes.has(s.id),own=user&&user.id===s.owner_id;
+  return '<article class="card script"><h3>'+esc(s.title)+'</h3><p>'+esc(s.description||"No description provided.")+'</p><div class="meta"><span class="pill">'+esc(s.script_type)+'</span><span>📁 '+esc(folderName(s.folder_id))+'</span><span>'+(s.visibility==="private"?"🔒 Private":"🌐 Public")+'</span><span>'+new Date(s.created_at).toLocaleDateString()+'</span></div><div class="actions"><button class="btn small primary" data-open="'+s.id+'">View code</button>'+(own?'<button class="btn small" data-edit="'+s.id+'">Edit</button><button class="btn small delete-btn" data-delete-script="'+s.id+'">Delete</button>':"")+'<button class="social-btn '+(liked?"is-liked":"")+'" data-post-like="'+s.id+'">'+(liked?"♥":"♡")+' '+count+'</button></div></article>';
+ }).join(""):'<div class="empty">'+(shFolderFilter?"This folder has no scripts yet. Create a script and choose this folder in the Save in folder field.":"No scripts found. Create one or change your filters.")+'</div>';
+}
+render=shRender;load=shLoad;
+/* Important: the original click handler captured the old save() function.
+   Rebind after replacing it, otherwise folder_id never gets persisted. */
+openEditor=function(s){
+ if(!user){toast("Sign in to create scripts.");modal("authModal");return}
+ shBaseOpenEditor(s);
+ let field=$("scriptFolderSelect")?.parentElement;
+ if(field)field.remove();
+ field=document.createElement("div");field.className="field";
+ field.innerHTML='<label>Save in folder</label><select id="scriptFolderSelect"><option value="">Unfiled</option>'+shFolders.map(f=>'<option value="'+f.id+'">'+esc(f.name)+'</option>').join("")+'</select><p class="note">Choose a folder to organize this script in My scripts.</p>';
+ $("scriptVisibility").parentElement.parentElement.insertAdjacentElement("afterend",field);
+ $("scriptFolderSelect").value=s?.folder_id||shFolderFilter||"";
+};
+save=async function(){
+ if(!requireDb()||!user)return;
+ const folderId=$("scriptFolderSelect")?.value||null;
+ if(folderId&&!shFolders.some(f=>f.id===folderId&&f.owner_id===user.id)){toast("Choose one of your own folders.");return}
+ const payload={title:$("scriptTitle").value.trim(),description:$("scriptDescription").value.trim(),script_type:$("scriptType").value,visibility:$("scriptVisibility").value,code:editor?editor.getValue():$("codeInput").value,owner_id:user.id,folder_id:folderId};
+ if(!payload.title){toast("Give your script a name.");return}
+ const result=editingId?await db.from("scripts").update(payload).eq("id",editingId).eq("owner_id",user.id):await db.from("scripts").insert(payload);
+ if(result.error){toast("Save failed: "+result.error.message);return}
+ modal("editModal",false);toast(editingId?"Script updated!":"Script published!");shSound("success");
+ shFolderFilter=folderId;view="mine";
+ document.querySelectorAll(".navbtn").forEach(b=>b.classList.toggle("active",b.dataset.view==="mine"));
+ await shLoad();
+};
+$("saveScript").onclick=save;
+$("newBtn").onclick=()=>openEditor();
+$("refreshBtn").onclick=()=>shLoad();
+$("search").oninput=()=>shRender();
+document.querySelectorAll(".navbtn").forEach(b=>b.onclick=()=>{
+ document.querySelectorAll(".navbtn").forEach(x=>x.classList.remove("active"));
+ b.classList.add("active");view=b.dataset.view;shFolderFilter=null;shLoad();
+});
+
 /* Keep the search input and navigation wired to the latest folder-aware renderer. */
 $("search").oninput=()=>shRender();
 document.querySelectorAll(".navbtn").forEach(b=>b.addEventListener("click",()=>{
