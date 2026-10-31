@@ -336,3 +336,54 @@ grant select, insert, delete on public.comments to authenticated;
 grant select on public.comments to anon;
 grant select, insert, delete on public.comment_likes to authenticated;
 grant select on public.comment_likes to anon, authenticated;
+
+
+-- ScriptHub 3.0 migration: editable comments, post-owner moderation, saved playlists.
+-- Safe to run in Supabase SQL Editor; does not remove existing data.
+alter table public.comments add column if not exists updated_at timestamptz not null default now();
+
+drop policy if exists "ScriptHub users edit own comments" on public.comments;
+create policy "ScriptHub users edit own comments" on public.comments
+for update using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+drop policy if exists "ScriptHub authors and post owners delete comments" on public.comments;
+create policy "ScriptHub authors and post owners delete comments" on public.comments
+for delete using (
+  auth.uid() = user_id
+  or exists (
+    select 1 from public.scripts s
+    where s.id = comments.script_id and s.owner_id = auth.uid()
+  )
+);
+grant update on public.comments to authenticated;
+
+create table if not exists public.saved_playlists (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  name text not null check (char_length(name) between 1 and 60),
+  created_at timestamptz not null default now(),
+  unique(owner_id,name)
+);
+create table if not exists public.saved_playlist_items (
+  id uuid primary key default gen_random_uuid(),
+  playlist_id uuid not null references public.saved_playlists(id) on delete cascade,
+  item_type text not null check (item_type in ('script','folder')),
+  item_id uuid not null,
+  created_at timestamptz not null default now(),
+  unique(playlist_id,item_type,item_id)
+);
+alter table public.saved_playlists enable row level security;
+alter table public.saved_playlist_items enable row level security;
+drop policy if exists "Owners manage saved playlists" on public.saved_playlists;
+create policy "Owners manage saved playlists" on public.saved_playlists
+for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+drop policy if exists "Owners manage saved playlist items" on public.saved_playlist_items;
+create policy "Owners manage saved playlist items" on public.saved_playlist_items
+for all using (
+  exists(select 1 from public.saved_playlists p where p.id=playlist_id and p.owner_id=auth.uid())
+) with check (
+  exists(select 1 from public.saved_playlists p where p.id=playlist_id and p.owner_id=auth.uid())
+);
+grant select,insert,update,delete on public.saved_playlists,saved_playlist_items to authenticated;
+create index if not exists saved_playlist_items_playlist_idx on public.saved_playlist_items(playlist_id,created_at desc);
