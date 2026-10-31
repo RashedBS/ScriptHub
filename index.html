@@ -1744,4 +1744,102 @@ refreshUser=async function(){await sh4RefreshUser();sh4RefreshProfile()};
 sh4RefreshProfile();
 
 </script>
+<script>
+
+/* ScriptHub 4.1 — reliable comments, genuinely read-only code viewer, mobile photo picker. */
+const sh41Style=document.createElement("style");
+sh41Style.textContent=`
+:root{--bg:#05080f;--panel:#0a101b;--panel2:#0e1725;--line:#1c293b;--muted:#8290a6;--text:#e8eef9}
+body{background:radial-gradient(ellipse at 50% -20%,#101a31 0,transparent 45%),#05080f!important}
+.card,.side,.modalbox{background:#090f19!important;border-color:#1b293c!important;box-shadow:0 14px 45px #0005}
+#viewCodeShell .CodeMirror{background:#070c14!important}
+#viewCodeShell .CodeMirror-gutters{background:#080e18!important}
+#viewCodeShell .CodeMirror-cursor{display:none!important}
+#viewCodeShell .CodeMirror-scroll{cursor:text}
+#viewCodeShell .CodeMirror-focused{outline:0}
+#viewModal .comment{background:#080e18!important;border-color:#1b293c!important}
+#viewModal .comment-body{white-space:pre-wrap;overflow-wrap:anywhere}
+#viewModal .comment-tools{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+#viewModal .comment-editbox{width:100%;min-height:88px;padding:11px;background:#050a12;border:1px solid #2a3a53;border-radius:10px;color:#edf3ff;margin:8px 0}
+.sh41-photo-actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.sh41-photo-actions button{flex:1;min-width:120px}
+.sh41-preview{width:84px;height:84px;object-fit:cover;border-radius:50%;border:2px solid #314663;background:#101a2a}
+.sh4-overlay,.sh4-dialog{transition:opacity .22s ease,transform .25s cubic-bezier(.2,.75,.25,1)}
+.sh4-overlay{opacity:0;visibility:hidden;pointer-events:none}
+.sh4-overlay.open{opacity:1;visibility:visible;pointer-events:auto}
+.sh4-dialog{transform:translateY(12px) scale(.98)}
+.sh4-overlay.open .sh4-dialog{transform:translateY(0) scale(1)}
+@media(prefers-reduced-motion:reduce){.sh4-overlay,.sh4-dialog{transition:none!important}}
+`;
+document.head.appendChild(sh41Style);
+/* Make the code viewer immutable even if a previous editor instance was created. */
+const sh41OldShow=showScript;
+showScript=async function(id){
+ await sh41OldShow(id);
+ const cm=window.shViewEditor;
+ if(cm){cm.setOption("readOnly","nocursor");cm.setOption("cursorBlinkRate",-1);cm.getWrapperElement().classList.add("sh4-code-locked");cm.refresh()}
+ const ta=$("viewCodeEditor");if(ta){ta.readOnly=true;ta.setAttribute("readonly","readonly")}
+ const pre=$("viewCode");if(pre){pre.removeAttribute("contenteditable");pre.setAttribute("aria-readonly","true")}
+};
+/* Reliable comments: explicit state, errors, reply posting, author edits, post-owner moderation. */
+shV23RenderComments=async function(scriptId){
+ const r=await db.from("comments").select("id,body,created_at,user_id,parent_id").eq("script_id",scriptId).order("created_at",{ascending:true});
+ if(r.error){$("comments").innerHTML='<p class="note">Comments could not load: '+esc(r.error.message)+'</p>';return}
+ const rows=r.data||[],ids=rows.map(x=>x.id);
+ const lr=ids.length?await db.from("comment_likes").select("comment_id,user_id").in("comment_id",ids):{data:[],error:null};
+ if(lr.error){$("comments").innerHTML='<p class="note">Comment reactions could not load: '+esc(lr.error.message)+'</p>';return}
+ const likes=lr.data||[],owner=!!user&&selected?.owner_id===user.id;
+ const render=(parent=null)=>rows.filter(c=>(c.parent_id||null)===parent).map(c=>{
+  const mine=!!user&&c.user_id===user.id,cl=likes.filter(x=>x.comment_id===c.id),liked=cl.some(x=>x.user_id===user.id);
+  const controls=(mine?'<button class="social-btn" data-c-edit="'+c.id+'">Edit</button>':"")+(mine||owner?'<button class="social-btn owner-mod" data-c-delete="'+c.id+'">Delete</button>':"");
+  return '<article class="comment" data-comment="'+c.id+'"><div class="comment-head"><strong>'+(mine?"You":"Community member")+'</strong><span> · '+new Date(c.created_at).toLocaleString()+'</span></div><div class="comment-body">'+esc(c.body)+'</div><div class="comment-tools"><button class="social-btn '+(liked?"is-liked":"")+'" data-c-like="'+c.id+'">'+(liked?"♥":"♡")+' '+cl.length+'</button><button class="social-btn" data-c-reply="'+c.id+'">Reply</button>'+controls+'</div><div class="reply-list">'+render(c.id)+'</div></article>';
+ }).join("");
+ $("comments").innerHTML=rows.some(x=>!x.parent_id)?render():'<p class="note">No comments yet. Be the first to start the conversation.</p>';
+ $("comments").querySelectorAll("[data-c-like]").forEach(b=>b.onclick=async()=>{
+  if(!user){toast("Sign in to like comments.");modal("authModal");return}
+  const id=b.dataset.cLike,ck=await db.from("comment_likes").select("comment_id").eq("comment_id",id).eq("user_id",user.id).maybeSingle();
+  if(ck.error)return toast(ck.error.message);
+  const res=ck.data?await db.from("comment_likes").delete().eq("comment_id",id).eq("user_id",user.id):await db.from("comment_likes").insert({comment_id:id,user_id:user.id});
+  if(res.error)return toast("Reaction failed: "+res.error.message);await shV23RenderComments(scriptId);
+ });
+ $("comments").querySelectorAll("[data-c-reply]").forEach(b=>b.onclick=()=>{
+  if(!user){toast("Sign in to reply.");modal("authModal");return}
+  const article=b.closest(".comment");let form=article.querySelector(":scope > .reply-form");if(form){form.remove();return}
+  form=document.createElement("div");form.className="reply-form";form.innerHTML='<textarea class="comment-editbox" maxlength="500" placeholder="Write a reply…"></textarea><div class="comment-tools"><button class="btn primary small" type="button">Post reply</button><button class="btn small" type="button">Cancel</button></div>';article.append(form);
+  const [send,cancel]=form.querySelectorAll("button");cancel.onclick=()=>form.remove();send.onclick=async()=>{send.disabled=true;await shV23CommentSubmit(form.querySelector("textarea").value,b.dataset.cReply);send.disabled=false};
+ });
+ $("comments").querySelectorAll("[data-c-edit]").forEach(b=>b.onclick=()=>{
+  const article=b.closest(".comment"),body=article.querySelector(".comment-body");if(article.querySelector(".comment-editbox"))return;
+  const area=document.createElement("textarea");area.className="comment-editbox";area.maxLength=500;area.value=body.textContent;body.after(area);
+  const actions=document.createElement("div");actions.className="comment-tools";actions.innerHTML='<button class="btn primary small" type="button">Save edit</button><button class="btn small" type="button">Cancel</button>';area.after(actions);
+  const [save,cancel]=actions.querySelectorAll("button");cancel.onclick=()=>{area.remove();actions.remove()};
+  save.onclick=async()=>{const bodyText=area.value.trim();if(!bodyText)return toast("Comment cannot be empty.");save.disabled=true;const u=await db.from("comments").update({body:bodyText,updated_at:new Date().toISOString()}).eq("id",b.dataset.cEdit).eq("user_id",user.id);if(u.error){save.disabled=false;return toast("Edit failed: "+u.error.message)}toast("Comment updated.");await shV23RenderComments(scriptId)};
+ });
+ $("comments").querySelectorAll("[data-c-delete]").forEach(b=>b.onclick=async()=>{
+  const ok=await sh4Confirm("Delete comment?","This permanently removes this comment and its nested replies.");
+  if(!ok)return;const d=await db.from("comments").delete().eq("id",b.dataset.cDelete);
+  if(d.error)return toast("Delete failed: "+d.error.message);toast("Comment deleted.");await shV23RenderComments(scriptId);
+ });
+};
+$("postComment").onclick=async()=>{
+ if(!user){toast("Sign in to comment.");modal("authModal");return}
+ if(!selected?.id){toast("Open a public script first.");return}
+ const body=$("commentText").value.trim();if(!body){toast("Write a comment first.");$("commentText").focus();return}
+ const btn=$("postComment");btn.disabled=true;btn.textContent="Posting…";
+ const r=await db.from("comments").insert({script_id:selected.id,user_id:user.id,body,parent_id:null});
+ btn.disabled=false;btn.textContent="Post comment";
+ if(r.error){toast("Comment failed: "+r.error.message+" — check that the latest Supabase SQL has been run.");return}
+ $("commentText").value="";toast("Comment posted!");await shV23RenderComments(selected.id);
+};
+/* Profile photo chooser: gallery/files picker plus a separate camera action. */
+const avatarFile=$("sh4AvatarFile");
+avatarFile.removeAttribute("capture");
+avatarFile.insertAdjacentHTML("afterend",'<div class="sh41-photo-actions"><button type="button" class="btn small" id="sh41PickPhoto">Choose from photos / files</button><button type="button" class="btn small" id="sh41TakePhoto">Use camera</button></div>');
+const cameraInput=document.createElement("input");cameraInput.type="file";cameraInput.accept="image/*";cameraInput.capture="environment";cameraInput.hidden=true;cameraInput.id="sh41CameraInput";avatarFile.parentElement.insertBefore(cameraInput,avatarFile.nextSibling);
+$("sh41PickPhoto").onclick=()=>avatarFile.click();$("sh41TakePhoto").onclick=()=>cameraInput.click();
+function sh41Preview(file){if(!file)return;const url=URL.createObjectURL(file);$("sh4ProfilePreview").src=url}
+avatarFile.addEventListener("change",()=>sh41Preview(avatarFile.files[0]));
+cameraInput.addEventListener("change",()=>{if(cameraInput.files[0]){const dt=new DataTransfer();dt.items.add(cameraInput.files[0]);avatarFile.files=dt.files;sh41Preview(cameraInput.files[0])}});
+
+</script>
 </body></html>
