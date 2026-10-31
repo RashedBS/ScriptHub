@@ -148,3 +148,57 @@ drop policy if exists "Users reply on visible scripts" on public.comments;
 create policy "Users reply on visible scripts" on public.comments for insert with check(auth.uid()=user_id and exists(select 1 from public.scripts s where s.id=script_id and (s.visibility='public' or s.owner_id=auth.uid())));
 grant select,insert,update,delete on public.folders to authenticated;
 grant select,insert,delete on public.comment_likes, public.folder_likes to authenticated;
+
+-- Public read permissions needed for public ScriptHub posts and their social counters.
+grant select on public.comments to anon, authenticated;
+grant select on public.script_likes to anon, authenticated;
+grant select on public.comment_likes to anon, authenticated;
+grant select on public.folders to anon, authenticated;
+grant select on public.folder_likes to anon, authenticated;
+
+-- Folder likes are visible only when the folder belongs to the viewer
+-- or contains at least one public script.
+drop policy if exists "Users like visible folders" on public.folder_likes;
+create policy "Users like visible folders" on public.folder_likes
+for select using (
+  exists (
+    select 1 from public.folders f
+    where f.id = folder_id
+      and (
+        f.owner_id = auth.uid()
+        or exists (
+          select 1 from public.scripts s
+          where s.folder_id = f.id and s.visibility = 'public'
+        )
+      )
+  )
+);
+
+drop policy if exists "Users add folder likes" on public.folder_likes;
+create policy "Users add folder likes" on public.folder_likes
+for insert with check (
+  auth.uid() = user_id
+  and exists (
+    select 1 from public.folders f
+    where f.id = folder_id
+      and (
+        f.owner_id = auth.uid()
+        or exists (
+          select 1 from public.scripts s
+          where s.folder_id = f.id and s.visibility = 'public'
+        )
+      )
+  )
+);
+
+-- Ensure public comment likes can be counted while private comments stay private.
+drop policy if exists "Users like visible comments" on public.comment_likes;
+create policy "Users like visible comments" on public.comment_likes
+for select using (
+  exists (
+    select 1 from public.comments c
+    join public.scripts s on s.id = c.script_id
+    where c.id = comment_id
+      and (s.visibility = 'public' or s.owner_id = auth.uid())
+  )
+);
