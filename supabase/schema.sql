@@ -260,3 +260,79 @@ with check (
 
 create index if not exists scripts_owner_folder_created_idx
 on public.scripts(owner_id, folder_id, created_at desc);
+
+-- ScriptHub social permissions repair (safe to run more than once).
+alter table public.comments
+  add column if not exists parent_id uuid references public.comments(id) on delete cascade;
+alter table public.scripts
+  add column if not exists folder_id uuid references public.folders(id) on delete set null;
+
+drop policy if exists "Comments on visible scripts are readable" on public.comments;
+drop policy if exists "Signed-in users comment on visible scripts" on public.comments;
+drop policy if exists "Users reply on visible scripts" on public.comments;
+drop policy if exists "ScriptHub public comments read" on public.comments;
+drop policy if exists "ScriptHub signed-in comment and reply" on public.comments;
+drop policy if exists "Users delete own comments" on public.comments;
+
+create policy "ScriptHub public comments read" on public.comments
+for select using (
+  exists (
+    select 1 from public.scripts s
+    where s.id = comments.script_id
+      and (s.visibility = 'public' or s.owner_id = auth.uid())
+  )
+);
+
+create policy "ScriptHub signed-in comment and reply" on public.comments
+for insert with check (
+  auth.uid() = user_id
+  and exists (
+    select 1 from public.scripts s
+    where s.id = comments.script_id
+      and s.visibility = 'public'
+  )
+  and (
+    parent_id is null
+    or exists (
+      select 1 from public.comments parent
+      where parent.id = comments.parent_id
+        and parent.script_id = comments.script_id
+    )
+  )
+);
+
+create policy "Users delete own comments" on public.comments
+for delete using (auth.uid() = user_id);
+
+drop policy if exists "Users like visible comments" on public.comment_likes;
+drop policy if exists "Users add comment likes" on public.comment_likes;
+drop policy if exists "Users remove comment likes" on public.comment_likes;
+
+create policy "Users like visible comments" on public.comment_likes
+for select using (
+  exists (
+    select 1 from public.comments c
+    join public.scripts s on s.id = c.script_id
+    where c.id = comment_likes.comment_id
+      and s.visibility = 'public'
+  )
+);
+
+create policy "Users add comment likes" on public.comment_likes
+for insert with check (
+  auth.uid() = user_id
+  and exists (
+    select 1 from public.comments c
+    join public.scripts s on s.id = c.script_id
+    where c.id = comment_likes.comment_id
+      and s.visibility = 'public'
+  )
+);
+
+create policy "Users remove comment likes" on public.comment_likes
+for delete using (auth.uid() = user_id);
+
+grant select, insert, delete on public.comments to authenticated;
+grant select on public.comments to anon;
+grant select, insert, delete on public.comment_likes to authenticated;
+grant select on public.comment_likes to anon, authenticated;
