@@ -341,4 +341,21 @@ document.querySelectorAll(".navbtn").forEach(b=>b.addEventListener("click",()=>{
 if(db){shLoad().then(()=>{if(view==="mine")shWorkspace()});}
 </script>
 
+
+<script>
+async function shRenderFolders(){
+ const host=$("folderList");if(!host)return;
+ const mine=shFolders.filter(f=>f.owner_id===user?.id);
+ const ids=mine.map(f=>f.id);
+ const likes=ids.length?await db.from("folder_likes").select("folder_id,user_id").in("folder_id",ids):{data:[]};
+ const all=likes.data||[];
+ host.innerHTML=mine.length?mine.map(f=>{
+  const n=all.filter(x=>x.folder_id===f.id).length,liked=all.some(x=>x.folder_id===f.id&&x.user_id===user?.id);
+  return '<div class="folder-chip" data-folder="'+f.id+'"><span><strong>📁 '+esc(f.name)+'</strong><br><small>'+esc(f.description||"Your collection")+' · '+n+' likes</small></span><span class="social-btn '+(liked?"is-liked":"")+'" data-folder-like="'+f.id+'">'+(liked?"♥":"♡")+'</span></div>';
+ }).join(""):'<div class="note" style="padding:8px 2px">No folders yet. Create one to organize your scripts.</div>';
+ host.querySelectorAll("[data-folder]").forEach(el=>el.onclick=e=>{if(e.target.closest("[data-folder-like]"))return;shFolderFilter=el.dataset.folder;view="mine";document.querySelectorAll(".navbtn").forEach(b=>b.classList.toggle("active",b.dataset.view==="mine"));shLoad()});
+ host.querySelectorAll("[data-folder-like]").forEach(b=>b.onclick=async e=>{e.stopPropagation();if(!user){toast("Sign in to like folders.");modal("authModal");return}const id=b.dataset.folderLike;const {data}=await db.from("folder_likes").select("folder_id").eq("folder_id",id).eq("user_id",user.id).maybeSingle();const r=data?await db.from("folder_likes").delete().eq("folder_id",id).eq("user_id",user.id):await db.from("folder_likes").insert({folder_id:id,user_id:user.id});if(r.error)toast(r.error.message);else shRenderFolders()});
+}
+</script>
+
 </body></html>
