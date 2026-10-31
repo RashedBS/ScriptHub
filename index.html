@@ -475,6 +475,211 @@ $("scriptGrid").addEventListener("click",async e=>{
 const shOriginalNav=document.querySelectorAll(".navbtn");
 shOriginalNav.forEach(b=>b.addEventListener("click",()=>{shFolderFilter=null;if(b.dataset.view!=="mine")$("folderWorkspace")?.remove()},{capture:false}));
 if(db){shLoad().then(()=>{if(view==="mine")shWorkspace()})}
+
+/* Final UX pass: safe custom confirmations, reliable folder filtering, owner-only deletes, blue controls */
+const shDeleteStyle=document.createElement("style");
+shDeleteStyle.textContent=`
+:root{--blue:#287bff;--blue2:#145de0;--blueGlow:#287bff40}
+.btn,.tab,.navbtn,.social-btn{transition:background .18s,border-color .18s,color .18s,transform .18s,box-shadow .18s}
+.btn.primary,.btn.primary:focus{background:linear-gradient(135deg,#398bff,#155de0)!important;border:1px solid #65a7ff!important;color:#fff!important;box-shadow:0 7px 22px #1765e044}
+.btn:not(.primary),.tab,.social-btn{border-color:#253d60;color:#c4d8f8;background:#101d31}
+.btn:hover,.tab:hover,.social-btn:hover{border-color:#438eff;background:#172d4d;color:#fff;box-shadow:0 0 0 2px #287bff18}
+.tab.active,.navbtn.active{background:#15386b!important;border:1px solid #438eff!important;color:#fff!important}
+.navbtn:hover{background:#122c4e!important}
+.folder-chip{position:relative;padding-right:9px}
+.folder-chip.selected{border-color:#438eff;background:#102748}
+.folder-chip .folder-actions{display:flex;align-items:center;gap:5px;flex:0 0 auto}
+.delete-btn{background:#241522!important;border:1px solid #704052!important;color:#ff9aad!important}
+.delete-btn:hover{background:#3a1b2a!important;border-color:#ff7185!important}
+.script .actions{display:flex;flex-wrap:wrap}
+.script .actions .delete-btn{margin-left:auto}
+.sh-folder-current{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px;padding:10px 12px;border:1px solid #244a7d;border-radius:10px;background:#0d1d34;color:#c7dcff;font-size:12px}
+.sh-confirm{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:16px;background:#020611d9;backdrop-filter:blur(12px)}
+.sh-confirm.open{display:flex}
+.sh-confirm-card{width:min(420px,100%);padding:22px;border-radius:17px;border:1px solid #34547f;background:linear-gradient(145deg,#111d30,#0b1320);box-shadow:0 30px 100px #000b;animation:shConfirmIn .18s ease-out}
+.sh-confirm-card h3{margin:0 0 8px;color:#f3f7ff;font-size:18px}
+.sh-confirm-card p{margin:0;color:#9eafc8;font-size:13px;line-height:1.65}
+.sh-confirm-actions{display:flex;gap:9px;margin-top:18px}
+.sh-confirm-actions button{flex:1}
+@keyframes shConfirmIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+.comment{position:relative}
+.comment>.comment-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.comment .delete-btn{font-size:10px;padding:5px 8px}
+@media(max-width:600px){.folder-chip{flex-wrap:wrap}.sh-confirm-card{padding:18px}}
+`;
+document.head.appendChild(shDeleteStyle);
+const shConfirm=document.createElement("div");
+shConfirm.className="sh-confirm";shConfirm.id="shConfirm";
+shConfirm.innerHTML='<div class="sh-confirm-card" role="dialog" aria-modal="true" aria-labelledby="shConfirmTitle"><h3 id="shConfirmTitle">Are you sure?</h3><p id="shConfirmText"></p><div class="sh-confirm-actions"><button class="btn delete-btn" id="shConfirmYes">Delete</button><button class="btn" id="shConfirmNo">Cancel</button></div></div>';
+document.body.appendChild(shConfirm);
+let shConfirmResolve=null;
+function shAskDelete(title,message){
+ $("shConfirmTitle").textContent=title;$("shConfirmText").textContent=message;
+ shConfirm.classList.add("open");
+ return new Promise(resolve=>{shConfirmResolve=resolve});
+}
+function shCloseConfirm(answer){shConfirm.classList.remove("open");if(shConfirmResolve){shConfirmResolve(answer);shConfirmResolve=null}}
+$("shConfirmYes").onclick=()=>shCloseConfirm(true);
+$("shConfirmNo").onclick=()=>shCloseConfirm(false);
+shConfirm.addEventListener("click",e=>{if(e.target===shConfirm)shCloseConfirm(false)});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&shConfirm.classList.contains("open"))shCloseConfirm(false)});
+async function shDeleteScript(id){
+ const item=scripts.find(x=>x.id===id);if(!item||!user||item.owner_id!==user.id)return toast("You can only delete your own scripts.");
+ if(!await shAskDelete("Delete this script?","This permanently deletes the script and its comments, replies and likes."))return;
+ const {error}=await db.from("scripts").delete().eq("id",id).eq("owner_id",user.id);
+ if(error)return toast("Could not delete script: "+error.message);
+ if(selected?.id===id)modal("viewModal",false);
+ toast("Script deleted.");shSound("success");await shLoad();
+}
+async function shDeleteFolder(id){
+ const folder=shFolders.find(x=>x.id===id);if(!folder||!user||folder.owner_id!==user.id)return toast("You can only delete your own folders.");
+ if(!await shAskDelete("Delete this folder?","Scripts inside will be kept, but moved to Unfiled. This cannot be undone."))return;
+ const {error}=await db.from("folders").delete().eq("id",id).eq("owner_id",user.id);
+ if(error)return toast("Could not delete folder: "+error.message);
+ if(shFolderFilter===id)shFolderFilter=null;
+ toast("Folder deleted. Its scripts are safe in Unfiled.");shSound("success");await shLoad();
+}
+async function shDeleteComment(id){
+ if(!user)return toast("Sign in first.");
+ const {data,error:readError}=await db.from("comments").select("id,user_id").eq("id",id).maybeSingle();
+ if(readError||!data)return toast("Comment not found.");
+ if(data.user_id!==user.id)return toast("You can only delete your own comments or replies.");
+ if(!await shAskDelete("Delete this comment?","This also deletes all replies attached to it."))return;
+ const {error}=await db.from("comments").delete().eq("id",id).eq("user_id",user.id);
+ if(error)return toast("Could not delete comment: "+error.message);
+ toast("Comment deleted.");shSound("success");await shShowScript(selected.id);
+}
+async function shLoad(){
+ if(!requireDb())return;
+ shFolders=[];
+ if(user){
+  const fr=await db.from("folders").select("id,name,description,owner_id,created_at").eq("owner_id",user.id).order("created_at",{ascending:false});
+  if(fr.error){toast("Folders: "+fr.error.message);return}
+  shFolders=fr.data||[];
+ }
+ if(shFolderFilter&&(!user||view!=="mine"))shFolderFilter=null;
+ let q=db.from("scripts").select("id,title,description,script_type,visibility,code,owner_id,created_at,folder_id").order("created_at",{ascending:false});
+ if(view==="mine"){
+  if(!user){$("scriptGrid").innerHTML='<div class="empty">Sign in to see your scripts and folders.</div>';shWorkspace();return}
+  q=q.eq("owner_id",user.id);
+ }else if(view==="liked"){
+  if(!user){$("scriptGrid").innerHTML='<div class="empty">Sign in to see liked scripts.</div>';return}
+  const {data:likes,error}=await db.from("script_likes").select("script_id").eq("user_id",user.id);
+  if(error){toast(error.message);return}
+  const ids=(likes||[]).map(x=>x.script_id);
+  if(!ids.length){scripts=[];await shRender();$("folderWorkspace")?.remove();return}
+  q=q.in("id",ids);
+ }else q=q.eq("visibility","public");
+ if(shFolderFilter)q=q.eq("folder_id",shFolderFilter);
+ if(kind!=="All")q=q.eq("script_type",kind);
+ const {data,error}=await q;
+ if(error){toast("Could not load scripts: "+error.message);return}
+ scripts=data||[];
+ await shRender();
+ if(view==="mine"){shWorkspace();await shRenderFolders()}else $("folderWorkspace")?.remove();
+}
+async function shRender(){
+ const term=$("search").value.toLowerCase();
+ const list=scripts.filter(s=>(s.title+" "+(s.description||"")).toLowerCase().includes(term));
+ const ids=list.map(s=>s.id);
+ const likeResult=ids.length?await db.from("script_likes").select("script_id,user_id").in("script_id",ids):{data:[]};
+ const allLikes=likeResult.data||[];
+ const myLikes=new Set(allLikes.filter(x=>x.user_id===user?.id).map(x=>x.script_id));
+ const folderName=id=>shFolders.find(f=>f.id===id)?.name||"Unfiled";
+ const grid=$("scriptGrid");
+ const oldNotice=$("shFolderCurrent");if(oldNotice)oldNotice.remove();
+ if(shFolderFilter){
+  const folder=shFolders.find(f=>f.id===shFolderFilter);
+  const notice=document.createElement("div");notice.id="shFolderCurrent";notice.className="sh-folder-current";
+  notice.innerHTML='<span>📁 '+esc(folder?.name||"Selected folder")+' · '+list.length+' scripts</span><button class="btn small" id="shClearFolder">Show all</button>';
+  grid.parentElement.insertBefore(notice,grid);
+  $("shClearFolder").onclick=()=>{shFolderFilter=null;shLoad()};
+ }
+ grid.innerHTML=list.length?list.map(s=>{
+  const count=allLikes.filter(x=>x.script_id===s.id).length,liked=myLikes.has(s.id),own=user&&user.id===s.owner_id;
+  return '<article class="card script"><h3>'+esc(s.title)+'</h3><p>'+esc(s.description||"No description provided.")+'</p><div class="meta"><span class="pill">'+esc(s.script_type)+'</span><span>📁 '+esc(folderName(s.folder_id))+'</span><span>'+(s.visibility==="private"?"🔒 Private":"🌐 Public")+'</span><span>'+new Date(s.created_at).toLocaleDateString()+'</span></div><div class="actions"><button class="btn small primary" data-open="'+s.id+'">View code</button>'+(own?'<button class="btn small" data-edit="'+s.id+'">Edit</button><button class="btn small delete-btn" data-delete-script="'+s.id+'">Delete</button>':"")+'<button class="social-btn '+(liked?"is-liked":"")+'" data-post-like="'+s.id+'">'+(liked?"♥":"♡")+' '+count+'</button></div></article>';
+ }).join(""):'<div class="empty">'+(shFolderFilter?"This folder is empty. Open Create script and choose this folder when saving.":"No scripts here yet. Create a script or choose another filter.")+'</div>';
+}
+render=shRender;load=shLoad;
+function shWorkspace(){
+ let box=$("folderWorkspace");
+ if(!box){box=document.createElement("section");box.id="folderWorkspace";box.innerHTML='<div class="workspace-head"><strong>YOUR FOLDERS</strong><div class="workspace-tools"><button class="btn primary small" id="addFolderBtn">＋ New folder</button><button class="btn small" id="allFoldersBtn">All scripts</button><button class="btn small" id="soundToggle">Sound: On</button></div></div><div class="folder-grid" id="folderList"></div>';const main=document.querySelector("main");main.insertBefore(box,main.firstChild)}
+ $("addFolderBtn").onclick=shOpenFolderDialog;
+ $("allFoldersBtn").onclick=()=>{shFolderFilter=null;shLoad()};
+ $("soundToggle").textContent="Sound: "+(shSoundEnabled?"On":"Off");
+ $("soundToggle").onclick=()=>{shSoundEnabled=!shSoundEnabled;$("soundToggle").textContent="Sound: "+(shSoundEnabled?"On":"Off");if(shSoundEnabled)shSound("success")};
+ shRenderFolders();
+}
+async function shRenderFolders(){
+ const host=$("folderList");if(!host)return;
+ if(!shFolders.length){host.innerHTML='<div class="note">No folders yet. Tap “New folder” to create your first collection.</div>';return}
+ const ids=shFolders.map(f=>f.id);
+ const [scriptRows,likesRows]=await Promise.all([
+  db.from("scripts").select("id,folder_id").in("folder_id",ids),
+  db.from("folder_likes").select("folder_id,user_id").in("folder_id",ids)
+ ]);
+ if(scriptRows.error){toast("Folder contents: "+scriptRows.error.message);return}
+ const scriptData=scriptRows.data||[],likes=likesRows.data||[];
+ host.innerHTML=shFolders.map(f=>{
+  const count=scriptData.filter(s=>s.folder_id===f.id).length,folderLikes=likes.filter(x=>x.folder_id===f.id),liked=folderLikes.some(x=>x.user_id===user?.id);
+  return '<div class="folder-chip '+(shFolderFilter===f.id?"selected":"")+'" data-folder="'+f.id+'"><span class="folder-name">📁 '+esc(f.name)+'<small>'+esc(f.description||"Your collection")+'</small></span><span class="folder-count">'+count+' scripts</span><span class="folder-actions"><button class="social-btn '+(liked?"is-liked":"")+'" data-folder-like="'+f.id+'">'+(liked?"♥":"♡")+' '+folderLikes.length+'</button><button class="social-btn delete-btn" data-folder-delete="'+f.id+'">Delete</button></span></div>';
+ }).join("");
+ host.querySelectorAll("[data-folder]").forEach(el=>el.onclick=e=>{
+  if(e.target.closest("button"))return;
+  shFolderFilter=el.dataset.folder;
+  $("search").value="";
+  shLoad();
+ });
+ host.querySelectorAll("[data-folder-like]").forEach(b=>b.onclick=async e=>{
+  e.stopPropagation();if(!user)return toast("Sign in to like folders.");
+  const id=b.dataset.folderLike;
+  const {data,error}=await db.from("folder_likes").select("folder_id").eq("folder_id",id).eq("user_id",user.id).maybeSingle();
+  if(error)return toast(error.message);
+  const result=data?await db.from("folder_likes").delete().eq("folder_id",id).eq("user_id",user.id):await db.from("folder_likes").insert({folder_id:id,user_id:user.id});
+  if(result.error)toast(result.error.message);else{shSound("like");await shRenderFolders()}
+ });
+ host.querySelectorAll("[data-folder-delete]").forEach(b=>b.onclick=e=>{e.stopPropagation();shDeleteFolder(b.dataset.folderDelete)});
+}
+async function shShowScript(id){
+ const s=scripts.find(x=>x.id===id);if(!s)return;selected=s;
+ $("viewTitle").textContent=s.title;$("viewDescription").textContent=s.description||"No description";$("viewMeta").textContent=s.script_type+" · "+(s.visibility==="public"?"Public":"Private");$("viewCode").textContent=s.code;
+ const owner=user&&user.id===s.owner_id;
+ $("viewCode").insertAdjacentHTML("beforebegin",'<div class="social-actions" id="shScriptActions"></div>');
+ $("shScriptActions").innerHTML=(owner?'<button class="btn small delete-btn" id="shDeleteOpenScript">Delete script</button>':"");
+ $("shDeleteOpenScript")?.addEventListener("click",()=>shDeleteScript(s.id));
+ $("comments").innerHTML='<p class="note">Loading conversation…</p>';modal("viewModal");
+ const [cr,lr,pl]=await Promise.all([
+  db.from("comments").select("id,body,created_at,user_id,parent_id").eq("script_id",id).order("created_at"),
+  db.from("script_likes").select("user_id").eq("script_id",id),
+  user?db.from("script_likes").select("script_id").eq("script_id",id).eq("user_id",user.id).maybeSingle():Promise.resolve({data:null})
+ ]);
+ if(cr.error){$("comments").textContent=cr.error.message;return}
+ const rows=cr.data||[],commentIds=rows.map(x=>x.id);
+ const likesResult=commentIds.length?await db.from("comment_likes").select("comment_id,user_id").in("comment_id",commentIds):{data:[]};
+ const likes=likesResult.data||[];
+ function tree(parent=null){
+  return rows.filter(c=>(c.parent_id||null)===parent).map(c=>{
+   const ls=likes.filter(x=>x.comment_id===c.id),liked=ls.some(x=>x.user_id===user?.id),mine=user&&user.id===c.user_id;
+   return '<div class="comment" data-comment="'+c.id+'"><div class="comment-head"><strong>'+(mine?"You":"Community creator")+'</strong><span>· '+new Date(c.created_at).toLocaleString()+'</span>'+(mine?'<button class="social-btn delete-btn" data-comment-delete="'+c.id+'">Delete</button>':"")+'</div><p>'+esc(c.body)+'</p><div class="social-actions"><button class="social-btn '+(liked?"is-liked":"")+'" data-comment-like="'+c.id+'">'+(liked?"♥":"♡")+' '+ls.length+'</button><button class="social-btn" data-reply="'+c.id+'">↳ Reply</button></div><div class="reply-list">'+tree(c.id)+'</div></div>';
+  }).join("");
+ }
+ $("comments").innerHTML=rows.length?tree():'<p class="note">No comments yet. Start the conversation!</p>';
+ $("likeBtn").textContent=(pl.data?"♥ Liked":"♡ Like")+" · "+(lr.data||[]).length;
+ $("comments").querySelectorAll("[data-reply]").forEach(b=>b.onclick=()=>{
+  if(!user){toast("Sign in to reply.");modal("authModal");return}
+  const node=b.closest(".comment");let form=node.querySelector(".reply-form");if(form){form.remove();return}
+  form=document.createElement("div");form.className="reply-form";form.innerHTML='<input maxlength="500" placeholder="Write a reply…" aria-label="Write a reply"><button class="btn small primary">Reply</button>';node.appendChild(form);
+  form.querySelector("button").onclick=()=>shPostComment(form.querySelector("input").value,b.dataset.reply);
+ });
+ $("comments").querySelectorAll("[data-comment-like]").forEach(b=>b.onclick=()=>shToggleCommentLike(b.dataset.commentLike));
+ $("comments").querySelectorAll("[data-comment-delete]").forEach(b=>b.onclick=()=>shDeleteComment(b.dataset.commentDelete));
+}
+showScript=shShowScript;
+$("scriptGrid").addEventListener("click",e=>{
+ const b=e.target.closest("[data-delete-script]");if(b){e.stopPropagation();shDeleteScript(b.dataset.deleteScript)}
+});
+/* Always open the custom confirmation UI; no native browser confirm/alert/prompt. */
+
 </script>
 
 </body></html>
