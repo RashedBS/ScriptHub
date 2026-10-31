@@ -794,6 +794,126 @@ document.querySelectorAll(".navbtn").forEach(b=>b.onclick=()=>{
  b.classList.add("active");view=b.dataset.view;shFolderFilter=null;shLoad();
 });
 
+
+/* User-friendly folder accordion and fully custom folder picker (no native select popup). */
+const shFolderUX=document.createElement("style");
+shFolderUX.textContent=`
+#folderWorkspace{margin-bottom:14px;padding:16px;border:1px solid #202d42;border-radius:15px;background:#090f19}
+.workspace-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.workspace-head strong{font-size:12px;letter-spacing:1.2px;color:#dce7fa}
+.workspace-tools{display:flex;gap:7px;flex-wrap:wrap}
+.folder-grid{display:grid;grid-template-columns:1fr;gap:9px}
+.folder-accordion{border:1px solid #1e2e45;background:#0b1421;border-radius:12px;overflow:hidden}
+.folder-accordion.open{border-color:#355b8d;background:#0d192a}
+.folder-acc-head{width:100%;display:flex;align-items:center;gap:10px;text-align:left;padding:13px;background:transparent;border:0;color:#e5edfa}
+.folder-chevron{color:#91b4e8;font-size:14px;transition:transform .2s}
+.folder-accordion.open .folder-chevron{transform:rotate(90deg)}
+.folder-emoji{font-size:20px}
+.folder-title{min-width:0;flex:1;font-weight:700;font-size:13px}
+.folder-title small{display:block;color:#8091aa;font-weight:400;font-size:11px;margin-top:3px}
+.folder-count{font-size:11px;color:#9db2cf;white-space:nowrap}
+.folder-acc-actions{display:flex;align-items:center;gap:6px;padding:0 10px 10px;flex-wrap:wrap}
+.folder-contents{display:none;padding:0 10px 10px}
+.folder-accordion.open .folder-contents{display:grid;gap:7px}
+.folder-script-row{display:flex;align-items:center;gap:8px;padding:10px;border:1px solid #1c2b40;background:#080f19;border-radius:9px;min-width:0}
+.folder-script-row .folder-script-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#dce7f8;font-size:12px}
+.folder-empty{padding:14px;border:1px dashed #2a3b53;border-radius:9px;color:#8494aa;font-size:12px;line-height:1.6}
+.sh-folder-picker{position:relative}
+.sh-folder-trigger{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;padding:13px 14px;border:1px solid #2a3b55;border-radius:10px;background:#080f19;color:#e8f0fc}
+.sh-folder-trigger:focus-visible,.sh-folder-option:focus-visible{outline:2px solid #5485c3;outline-offset:2px}
+.sh-folder-menu{display:none;position:absolute;z-index:40;top:calc(100% + 7px);left:0;right:0;max-height:230px;overflow:auto;padding:5px;border:1px solid #304867;border-radius:12px;background:#0b1421;box-shadow:0 18px 45px #000c}
+.sh-folder-menu.open{display:grid;gap:4px}
+.sh-folder-option{display:flex;align-items:center;justify-content:space-between;width:100%;padding:11px;border:0;border-radius:8px;background:transparent;color:#dce8fa;text-align:left;font-size:13px}
+.sh-folder-option[aria-selected=true],.sh-folder-option:hover{background:#162b48}
+.sh-folder-help{font-size:11px;color:#8394ab;line-height:1.55;margin-top:7px}
+.sh-onboarding{padding:13px 14px;margin:0 0 12px;border:1px solid #243b5a;border-radius:12px;background:#0b1728;color:#aebfd8;font-size:12px;line-height:1.7}
+.sh-onboarding strong{color:#e2edff}
+@media(max-width:560px){.folder-acc-head{gap:7px;padding:11px}.folder-count{font-size:10px}.folder-acc-actions .btn{padding:7px 9px}.folder-script-row{flex-wrap:wrap}.folder-script-row .folder-script-name{flex-basis:100%}}
+`;
+document.head.appendChild(shFolderUX);
+let shExpandedFolders=new Set();
+function shBuildFolderPicker(selectedId){
+ const wrap=document.createElement("div");wrap.className="field sh-folder-picker";
+ const current=shFolders.find(f=>f.id===selectedId);
+ wrap.innerHTML='<label>Save in folder</label><input type="hidden" id="scriptFolderSelect" value="'+(selectedId||"")+'"><button type="button" class="sh-folder-trigger" id="shFolderTrigger" aria-haspopup="listbox" aria-expanded="false"><span id="shFolderSelectedLabel">📁 '+esc(current?.name||"Unfiled")+'</span><span>⌄</span></button><div class="sh-folder-menu" id="shFolderMenu" role="listbox" aria-label="Choose a folder"></div><p class="sh-folder-help">Choose where this script belongs. You can open the folder later in My scripts.</p>';
+ const menu=wrap.querySelector("#shFolderMenu"),trigger=wrap.querySelector("#shFolderTrigger");
+ const choices=[{id:"",name:"Unfiled"},...shFolders];
+ menu.innerHTML=choices.map(f=>'<button type="button" role="option" aria-selected="'+((f.id||"")=== (selectedId||""))+'" class="sh-folder-option" data-folder-choice="'+(f.id||"")+'"><span>'+(f.id?"📁 ":"🗂️ ")+esc(f.name)+'</span><span>'+(f.id===selectedId&&f.id?"✓":"")+'</span></button>').join("");
+ trigger.onclick=()=>{const open=menu.classList.toggle("open");trigger.setAttribute("aria-expanded",String(open))};
+ menu.querySelectorAll("[data-folder-choice]").forEach(b=>b.onclick=()=>{
+  const id=b.dataset.folderChoice||"",folder=shFolders.find(f=>f.id===id);
+  wrap.querySelector("#scriptFolderSelect").value=id;
+  wrap.querySelector("#shFolderSelectedLabel").textContent=(folder?"📁 "+folder.name:"🗂️ Unfiled");
+  menu.classList.remove("open");trigger.setAttribute("aria-expanded","false");
+  menu.querySelectorAll("[role=option]").forEach(x=>x.setAttribute("aria-selected",String(x===b)));
+ });
+ document.addEventListener("click",e=>{if(!wrap.contains(e.target)){menu.classList.remove("open");trigger.setAttribute("aria-expanded","false")}});
+ return wrap;
+}
+openEditor=function(s){
+ if(!user){toast("Sign in to create scripts.");modal("authModal");return}
+ shBaseOpenEditor(s);
+ const old=$("scriptFolderSelect")?.closest(".field");old?.remove();
+ const selectedId=s?.folder_id||shFolderFilter||"";
+ const picker=shBuildFolderPicker(selectedId);
+ $("scriptVisibility").closest(".row").insertAdjacentElement("afterend",picker);
+};
+save=async function(){
+ if(!requireDb()||!user)return;
+ const folderId=$("scriptFolderSelect")?.value||null;
+ if(folderId&&!shFolders.some(f=>f.id===folderId&&f.owner_id===user.id)){toast("Choose one of your folders.");return}
+ const payload={title:$("scriptTitle").value.trim(),description:$("scriptDescription").value.trim(),script_type:$("scriptType").value,visibility:$("scriptVisibility").value,code:editor?editor.getValue():$("codeInput").value,owner_id:user.id,folder_id:folderId};
+ if(!payload.title){toast("Add a script name first.");$("scriptTitle").focus();return}
+ const result=editingId?await db.from("scripts").update(payload).eq("id",editingId).eq("owner_id",user.id):await db.from("scripts").insert(payload);
+ if(result.error){toast("Couldn't save: "+result.error.message);return}
+ modal("editModal",false);toast(editingId?"Script updated!":"Script published!");shSound("success");
+ view="mine";shFolderFilter=folderId;
+ document.querySelectorAll(".navbtn").forEach(b=>b.classList.toggle("active",b.dataset.view==="mine"));
+ await shLoad();
+};
+$("saveScript").onclick=save;
+async function shRenderFolders(){
+ const host=$("folderList");if(!host)return;
+ if(!shFolders.length){host.innerHTML='<div class="folder-empty">No folders yet. Create one to organize your scripts.</div>';return}
+ const ids=shFolders.map(f=>f.id);
+ const [sr,lr]=await Promise.all([
+  db.from("scripts").select("id,title,description,script_type,visibility,owner_id,created_at,folder_id").eq("owner_id",user.id).in("folder_id",ids).order("created_at",{ascending:false}),
+  db.from("folder_likes").select("folder_id,user_id").in("folder_id",ids)
+ ]);
+ if(sr.error){toast("Could not load folder scripts: "+sr.error.message);return}
+ const rows=sr.data||[],likes=lr.data||[];
+ host.innerHTML=shFolders.map(f=>{
+  const items=rows.filter(s=>s.folder_id===f.id),fl=likes.filter(x=>x.folder_id===f.id),liked=fl.some(x=>x.user_id===user?.id),opened=shExpandedFolders.has(f.id);
+  return '<section class="folder-accordion '+(opened?"open":"")+'" data-folder-accordion="'+f.id+'"><button class="folder-acc-head" type="button" data-folder-toggle="'+f.id+'" aria-expanded="'+opened+'"><span class="folder-chevron">▶</span><span class="folder-emoji">📁</span><span class="folder-title">'+esc(f.name)+'<small>'+esc(f.description||"Your collection")+'</small></span><span class="folder-count">'+items.length+' script'+(items.length===1?"":"s")+'</span></button><div class="folder-acc-actions"><button type="button" class="social-btn '+(liked?"is-liked":"")+'" data-folder-like="'+f.id+'">'+(liked?"♥":"♡")+' '+fl.length+'</button><button type="button" class="btn small" data-add-to-folder="'+f.id+'">＋ Add script</button><button type="button" class="btn small delete-btn" data-folder-delete="'+f.id+'">Delete folder</button></div><div class="folder-contents">'+(items.length?items.map(s=>'<div class="folder-script-row"><span>📄</span><span class="folder-script-name">'+esc(s.title)+'</span><span class="pill">'+esc(s.script_type)+'</span><button type="button" class="btn small" data-folder-edit="'+s.id+'">Edit</button><button type="button" class="btn small delete-btn" data-folder-script-delete="'+s.id+'">Delete</button></div>').join(""):'<div class="folder-empty">This folder is empty. Tap <strong>Add script</strong> to create a script directly in this folder.</div>')+'</div></section>';
+ }).join("");
+ host.querySelectorAll("[data-folder-toggle]").forEach(b=>b.onclick=()=>{
+  const id=b.dataset.folderToggle;
+  if(shExpandedFolders.has(id))shExpandedFolders.delete(id);else shExpandedFolders.add(id);
+  const card=b.closest(".folder-accordion");const open=shExpandedFolders.has(id);card.classList.toggle("open",open);b.setAttribute("aria-expanded",String(open));
+ });
+ host.querySelectorAll("[data-add-to-folder]").forEach(b=>b.onclick=()=>{shFolderFilter=b.dataset.addToFolder;openEditor()});
+ host.querySelectorAll("[data-folder-edit]").forEach(b=>b.onclick=()=>{const s=scripts.find(x=>x.id===b.dataset.folderEdit);if(s)openEditor(s);else toast("Refresh My scripts, then try again.")});
+ host.querySelectorAll("[data-folder-script-delete]").forEach(b=>b.onclick=()=>shDeleteScript(b.dataset.folderScriptDelete));
+ host.querySelectorAll("[data-folder-delete]").forEach(b=>b.onclick=()=>shDeleteFolder(b.dataset.folderDelete));
+ host.querySelectorAll("[data-folder-like]").forEach(b=>b.onclick=async()=>{
+  if(!user)return toast("Sign in to like folders.");
+  const id=b.dataset.folderLike;
+  const {data,error}=await db.from("folder_likes").select("folder_id").eq("folder_id",id).eq("user_id",user.id).maybeSingle();
+  if(error)return toast(error.message);
+  const result=data?await db.from("folder_likes").delete().eq("folder_id",id).eq("user_id",user.id):await db.from("folder_likes").insert({folder_id:id,user_id:user.id});
+  if(result.error)toast(result.error.message);else{shSound("like");await shRenderFolders()}
+ });
+}
+function shWorkspace(){
+ let box=$("folderWorkspace");
+ if(!box){box=document.createElement("section");box.id="folderWorkspace";box.innerHTML='<div class="workspace-head"><strong>YOUR LIBRARY</strong><div class="workspace-tools"><button class="btn primary small" id="addFolderBtn">＋ New folder</button><button class="btn small" id="allFoldersBtn">All scripts</button><button class="btn small" id="soundToggle">Sound: On</button></div></div><div class="sh-onboarding"><strong>Quick guide:</strong> Create a folder, tap its name to open or close it, then choose <strong>Add script</strong>. Your scripts will appear inside that folder.</div><div class="folder-grid" id="folderList"></div>';const main=document.querySelector("main");main.insertBefore(box,main.firstChild)}
+ $("addFolderBtn").onclick=shOpenFolderDialog;
+ $("allFoldersBtn").onclick=()=>{shFolderFilter=null;shLoad()};
+ $("soundToggle").textContent="Sound: "+(shSoundEnabled?"On":"Off");
+ $("soundToggle").onclick=()=>{shSoundEnabled=!shSoundEnabled;$("soundToggle").textContent="Sound: "+(shSoundEnabled?"On":"Off");if(shSoundEnabled)shSound("success")};
+ shRenderFolders();
+}
+
 /* Keep the search input and navigation wired to the latest folder-aware renderer. */
 $("search").oninput=()=>shRender();
 document.querySelectorAll(".navbtn").forEach(b=>b.addEventListener("click",()=>{
