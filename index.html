@@ -1110,6 +1110,11 @@ like=async function(){
 };
 $("likeBtn").onclick=like;
 
+
+/* Refresh public collection cards on first page load and every refresh tap. */
+$("refreshBtn").onclick=async()=>{await shLoad();await shRenderPublicCollections();toast("ScriptHub is up to date.")};
+if(db){shLoad().then(shRenderPublicCollections)}
+
 </script>
 
 </body></html>
