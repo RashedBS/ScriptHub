@@ -125,7 +125,7 @@ alter table public.folders enable row level security;
 alter table public.comment_likes enable row level security;
 alter table public.folder_likes enable row level security;
 drop policy if exists "Public folders or own folders are readable" on public.folders;
-create policy "Public folders or own folders are readable" on public.folders for select using (exists(select 1 from public.scripts s where s.folder_id=id and s.visibility='public') or auth.uid()=owner_id);
+create policy "Public folders or own folders are readable" on public.folders for select using (exists(select 1 from public.scripts s where s.folder_id=folders.id and s.visibility='public') or auth.uid()=owner_id);
 drop policy if exists "Users create own folders" on public.folders;
 create policy "Users create own folders" on public.folders for insert with check(auth.uid()=owner_id);
 drop policy if exists "Users update own folders" on public.folders;
