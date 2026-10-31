@@ -9,12 +9,67 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
 <style>
 :root{color-scheme:dark;--bg:#090d18;--panel:#101727;--panel2:#151f32;--line:#253149;--muted:#91a0b8;--text:#edf3ff;--blue:#6d8cff;--cyan:#55d6d0;--red:#ff7185}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% -10%,#1b2d55 0,transparent 38%),var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif}button,input,textarea,select{font:inherit}button{cursor:pointer}.top{height:68px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 5%;position:sticky;top:0;background:#090d18eF;backdrop-filter:blur(16px);z-index:5}.brand{font-weight:800;font-size:21px;letter-spacing:-.8px}.brand span{color:var(--cyan)}.topright{display:flex;gap:10px;align-items:center}.wrap{max-width:1180px;margin:0 auto;padding:44px 22px}.hero{display:flex;justify-content:space-between;align-items:center;gap:24px;margin-bottom:30px}.eyebrow{color:var(--cyan);font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}.hero h1{font-size:clamp(30px,5vw,48px);margin:10px 0;letter-spacing:-2px}.hero p{color:var(--muted);margin:0;max-width:600px;line-height:1.6}.layout{display:grid;grid-template-columns:220px 1fr;gap:22px}.side,.card,.modalbox{background:linear-gradient(145deg,#121c2e,#0e1625);border:1px solid var(--line);border-radius:16px}.side{padding:12px;height:max-content}.navbtn{width:100%;border:0;background:transparent;color:var(--muted);padding:12px;border-radius:10px;text-align:left;margin:2px 0}.navbtn.active,.navbtn:hover{background:#202d48;color:white}.mainhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.tabs{display:flex;gap:7px;flex-wrap:wrap}.tab,.btn{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:10px 14px;border-radius:10px}.tab.active{background:#263a68;border-color:#5878d0}.btn.primary{background:linear-gradient(100deg,#5878ed,#7466df);border:0;font-weight:700}.btn.ghost{background:transparent}.btn:disabled{opacity:.5;cursor:not-allowed}.search{width:100%;background:#0b1220;border:1px solid var(--line);padding:13px 14px;border-radius:11px;color:white;margin-bottom:14px;outline:none}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.script{padding:17px}.script h3{margin:0 0 8px;font-size:16px}.script p{color:var(--muted);font-size:13px;line-height:1.5;min-height:38px}.meta{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:12px;flex-wrap:wrap}.pill{border:1px solid #31415e;border-radius:30px;padding:4px 8px;color:#a9c0ff;font-size:11px}.actions{display:flex;gap:8px;margin-top:14px}.small{font-size:12px;padding:8px 10px}.empty{padding:50px 20px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:15px;grid-column:1/-1}.modal{position:fixed;inset:0;background:#020611c9;display:none;align-items:center;justify-content:center;padding:16px;z-index:10}.modal.show{display:flex}.modalbox{width:min(760px,100%);max-height:92vh;overflow:auto;padding:22px}.modalhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.modalhead h2{margin:0}.field{display:grid;gap:7px;margin:12px 0}.field label{font-size:13px;color:#b8c5da}.field input,.field textarea,.field select{width:100%;padding:12px;background:#0a1120;border:1px solid var(--line);border-radius:9px;color:white;outline:none}.field textarea{min-height:80px;resize:vertical}.CodeMirror{height:300px;border:1px solid var(--line);border-radius:10px;font:13px 'JetBrains Mono',monospace}.row{display:flex;gap:10px}.row>*{flex:1}.note{font-size:12px;color:var(--muted);line-height:1.5}.hidden{display:none!important}.codeview{white-space:pre-wrap;overflow:auto;background:#080e19;border:1px solid var(--line);padding:16px;border-radius:10px;font:12px 'JetBrains Mono',monospace;max-height:420px}.comment{border-top:1px solid var(--line);padding:12px 0}.comment p{margin:6px 0;color:#c3cee0;font-size:14px}.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#263a55;border:1px solid #506b9c;padding:12px 18px;border-radius:10px;display:none;z-index:20}.toast.show{display:block}@media(max-width:760px){.layout{grid-template-columns:1fr}.side{display:flex;overflow:auto}.navbtn{white-space:nowrap;width:auto}.hero{align-items:flex-start;flex-direction:column}.grid{grid-template-columns:1fr}.top{padding:0 16px}.wrap{padding:28px 14px}.mainhead{align-items:flex-start;flex-direction:column}}
+
+/* ScriptHub Studio visual refresh */
+:root{--bg:#080b14;--panel:#101727;--panel2:#151e31;--line:rgba(151,174,220,.16);--muted:#9aa9c2;--text:#f4f7ff;--blue:#8b9cff;--cyan:#68e5dc;--violet:#a78bfa}
+body{background:radial-gradient(ellipse at 8% 0%,rgba(80,105,220,.22),transparent 34%),radial-gradient(ellipse at 95% 18%,rgba(80,210,195,.10),transparent 28%),#080b14;letter-spacing:-.01em}
+.top{height:74px;padding:0 max(5%,calc((100% - 1240px)/2));background:rgba(8,11,20,.78);border-bottom:1px solid rgba(165,185,230,.12)}
+.brand{font-size:23px;letter-spacing:-1.2px;display:flex;align-items:center;gap:10px}
+.brand:before{content:"</>";display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,#7189ff,#9a75ed);color:white;font:800 13px 'JetBrains Mono';box-shadow:0 7px 24px #7189ff45}
+.brand span{color:#8be8df}
+.wrap{max-width:1240px;padding:52px 24px 70px}
+.hero{position:relative;overflow:hidden;min-height:255px;padding:38px 40px;margin-bottom:28px;border:1px solid rgba(151,174,220,.2);border-radius:25px;background:linear-gradient(115deg,rgba(25,39,70,.96),rgba(17,27,48,.92) 58%,rgba(30,37,73,.88));box-shadow:0 24px 80px #0005}
+.hero:after{content:"";position:absolute;width:330px;height:330px;right:8%;top:-170px;border-radius:50%;border:1px solid #a6b5ff22;box-shadow:0 0 0 28px #a6b5ff08,0 0 0 58px #a6b5ff06,0 0 90px #758cff22;pointer-events:none}
+.hero>div{position:relative;z-index:1;max-width:650px}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;color:#8be8df;font-size:11px;letter-spacing:1.8px}
+.eyebrow:before{content:"";width:7px;height:7px;border-radius:50%;background:#68e5dc;box-shadow:0 0 12px #68e5dc}
+.hero h1{font-size:clamp(36px,5vw,58px);line-height:1.04;letter-spacing:-2.8px;margin:15px 0}
+.hero h1 em{font-style:normal;background:linear-gradient(90deg,#91a6ff,#8be8df);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{font-size:15px;line-height:1.8;color:#b5c3dc;max-width:560px}
+.hero .btn{position:relative;z-index:2;margin-top:22px;padding:13px 19px;border-radius:12px;box-shadow:0 10px 28px #657fff38}
+.layout{grid-template-columns:228px minmax(0,1fr);gap:24px}
+.side{padding:10px;background:rgba(14,21,36,.78);border-color:rgba(151,174,220,.14);border-radius:17px;box-shadow:0 12px 40px #0002}
+.navbtn{font-size:13px;font-weight:600;padding:13px 14px;border-radius:11px;transition:.2s}
+.navbtn.active{background:linear-gradient(100deg,#334a81,#29365d);box-shadow:inset 0 0 0 1px #809bff35;color:#fff}
+.navbtn:hover{transform:translateX(2px);background:#202d48;color:#fff}
+main{min-width:0}
+.mainhead{margin:2px 0 16px}
+.tab{font-size:12px;font-weight:650;border-radius:9px;padding:9px 13px;background:#101827;color:#aab8d0;transition:.2s}
+.tab.active{background:#26385e;border-color:#718cff;color:white;box-shadow:0 5px 18px #526fe526}
+.btn{font-weight:650;font-size:13px;border-radius:10px;transition:transform .18s,border-color .18s,filter .18s}
+.btn:hover{transform:translateY(-1px);border-color:#718cff;filter:brightness(1.1)}
+.btn.primary{background:linear-gradient(110deg,#6685ff,#8b73e9);box-shadow:0 8px 24px #6d7fff35}
+.search{height:49px;padding:0 16px 0 44px;background:rgba(12,19,32,.9);border-color:rgba(151,174,220,.18);border-radius:12px;font-size:13px;box-shadow:0 8px 24px #0002}
+.search:focus,.field input:focus,.field textarea:focus,.field select:focus{border-color:#8297ff;box-shadow:0 0 0 3px #8297ff20}
+.grid{gap:15px}
+.script{position:relative;overflow:hidden;padding:19px;border-radius:16px;background:linear-gradient(145deg,rgba(20,31,51,.96),rgba(13,21,35,.98));border-color:rgba(151,174,220,.15);transition:transform .2s,border-color .2s,box-shadow .2s}
+.script:before{content:"";position:absolute;inset:0 auto 0 0;width:2px;background:linear-gradient(#7d99ff,#69e4dc);opacity:0;transition:opacity .2s}
+.script:hover{transform:translateY(-3px);border-color:#718cff65;box-shadow:0 15px 36px #0004}
+.script:hover:before{opacity:1}
+.script h3{font-size:15px;letter-spacing:-.3px}
+.script p{font-size:12px;line-height:1.65;color:#a6b4ca;min-height:40px}
+.meta{gap:9px;font-size:11px;color:#9aa9c2}
+.pill{background:#718cff14;border-color:#718cff35;color:#b9c8ff;font-weight:650}
+.actions{margin-top:16px}
+.empty{background:#0e1625aa;border-color:#34435e;color:#9eacc3;line-height:1.7}
+.modal{backdrop-filter:blur(12px);background:#030611c9}
+.modalbox{background:linear-gradient(145deg,#151f33,#0d1524);border-color:#40507180;border-radius:19px;box-shadow:0 30px 100px #0009}
+.modalhead{padding-bottom:13px;border-bottom:1px solid var(--line)}
+.modalhead h2{letter-spacing:-.7px}
+.field label{font-weight:600;color:#c4d0e4}
+.field input,.field textarea,.field select{border-radius:10px;background:#0a1120}
+.CodeMirror{border-radius:12px;border-color:#35435d}
+.codeview{border-radius:12px;line-height:1.65}
+.comment{border-color:#29364d}
+.toast{border-radius:12px;box-shadow:0 12px 40px #0007}
+@media(max-width:760px){.wrap{padding:25px 14px 45px}.hero{padding:28px 23px;min-height:0;border-radius:19px}.hero h1{font-size:39px;letter-spacing:-2px}.hero p{font-size:13px}.hero:after{right:-180px;top:-180px}.layout{gap:15px}.side{border-radius:13px}.navbtn{padding:10px 12px}.top{height:64px}.brand{font-size:20px}.script{padding:16px}}
+
 </style>
 </head>
 <body>
 <header class="top"><div class="brand">Script<span>Hub</span></div><div class="topright"><span id="userLabel" class="note">Not signed in</span><button class="btn small" id="authBtn">Sign in</button></div></header>
 <div class="wrap">
-<section class="hero"><div><div class="eyebrow">Made for Roblox creators</div><h1>Your scripts. Your community.</h1><p>Create, organize and share Roblox Lua scripts. Publish publicly for everyone or keep your work private in your own library.</p></div><button class="btn primary" id="newBtn">＋ Create script</button></section>
+<section class="hero"><div><div class="eyebrow">The Roblox Lua creator community</div><h1>Build. Share.<br><em>Level up.</em></h1><p>Your home for Roblox scripts. Discover community creations, publish your own code, and keep your personal library in one beautifully organized place.</p><button class="btn primary" id="newBtn">＋ Create your first script</button></div></section>
 <div class="layout"><aside class="side"><button class="navbtn active" data-view="discover">✦ Discover</button><button class="navbtn" data-view="mine">▤ My scripts</button><button class="navbtn" data-view="liked">♡ Liked scripts</button></aside>
 <main><div class="mainhead"><div class="tabs"><button class="tab active" data-kind="All">All</button><button class="tab" data-kind="Script">Script</button><button class="tab" data-kind="LocalScript">LocalScript</button><button class="tab" data-kind="ModuleScript">ModuleScript</button></div><button class="btn ghost small" id="refreshBtn">↻ Refresh</button></div><input id="search" class="search" placeholder="Search scripts by title or description..."><div id="scriptGrid" class="grid"><div class="empty">Connect Supabase to load ScriptHub.</div></div></main></div>
 </div>
