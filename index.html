@@ -168,6 +168,37 @@ main{min-width:0}.mainhead{display:flex;align-items:center;justify-content:space
 <div class="modal" id="editModal"><div class="modalbox"><div class="modalhead"><h2 id="editTitle">Create a script</h2><button class="btn small" data-close="editModal">✕</button></div><div class="field"><label>Script name</label><input id="scriptTitle" maxlength="80" placeholder="e.g. Simple Leaderstats"></div><div class="field"><label>Description</label><textarea id="scriptDescription" maxlength="300" placeholder="What does this script do?"></textarea></div><div class="row"><div class="field"><label>Script type</label><select id="scriptType"><option>Script</option><option>LocalScript</option><option>ModuleScript</option></select></div><div class="field"><label>Visibility</label><select id="scriptVisibility"><option value="public">Public</option><option value="private">Private</option></select></div></div><div class="field"><label>Lua code</label><textarea id="codeInput">print("Hello, ScriptHub!")</textarea></div><div class="row"><button class="btn primary" id="saveScript">Publish script</button><button class="btn" data-close="editModal">Cancel</button></div><p class="note">Never paste passwords, API keys, or other secrets into a public script.</p></div></div>
 <div class="modal" id="viewModal"><div class="modalbox"><div class="modalhead"><h2 id="viewTitle">Script</h2><button class="btn small" data-close="viewModal">✕</button></div><p id="viewDescription" class="note"></p><div class="meta" id="viewMeta"></div><pre class="codeview" id="viewCode"></pre><div class="actions"><button class="btn small" id="copyCode">Copy code</button><button class="btn small" id="likeBtn">♡ Like</button></div><h3>Comments</h3><div id="comments"></div><div class="field"><label>Add a comment</label><textarea id="commentText" maxlength="500" placeholder="Write a helpful comment..."></textarea></div><button class="btn primary small" id="postComment">Post comment</button></div></div>
 <div id="toast" class="toast"></div>
+<style>
+/* Creator workspace + interaction polish */
+.workspace-tools{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+.folder-chip{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 14px;border:1px solid #26364d;background:#0c1421;border-radius:12px;margin:8px 0;cursor:pointer;transition:.2s}
+.folder-chip:hover{border-color:#718cff;transform:translateY(-2px);background:#111c2d}
+.folder-chip strong{font-size:13px}.folder-chip small{color:#8796ac}
+.folder-icon{font-size:20px}
+.social-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.social-btn{background:#111b2a;border:1px solid #293950;color:#aebbd0;border-radius:9px;padding:7px 10px;font-size:11px;font-weight:700;cursor:pointer;transition:background .18s,border-color .18s,transform .18s}
+.social-btn:hover{background:#1a2940;border-color:#627bb4;transform:translateY(-1px)}
+.social-btn.is-liked{color:#ff8da6;border-color:#774258;background:#2a1722}
+.reply-list{margin:8px 0 0 18px;padding-left:12px;border-left:1px solid #293950}
+.comment{padding:13px 0}
+.comment-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:#8d9bb0;font-size:11px}
+.comment-head strong{color:#dce6f5}
+.comment-body{color:#c6d0df;font-size:13px;line-height:1.6;margin:7px 0}
+.reply-form{display:flex;gap:7px;margin:8px 0 0}
+.reply-form input{min-width:0;flex:1;background:#080e17;border:1px solid #293950;color:#edf3ff;border-radius:8px;padding:9px 10px}
+.custom-dialog{position:fixed;inset:0;z-index:40;background:#02040bd9;backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:16px}
+.custom-dialog.show{display:flex}
+.custom-dialog-card{width:min(430px,100%);background:#0d1420;border:1px solid #33435e;border-radius:17px;padding:20px;box-shadow:0 25px 90px #000b}
+.custom-dialog-card h3{margin:0 0 8px}.custom-dialog-card p{color:#9aa9be;font-size:13px;line-height:1.6}
+.custom-dialog-card input,.custom-dialog-card textarea{width:100%;background:#080e17;border:1px solid #2a3850;border-radius:9px;color:#f1f5fb;padding:12px;margin:8px 0}
+body{scroll-behavior:smooth}
+button,.btn,.tab,.navbtn,.social-btn{ -webkit-tap-highlight-color:transparent; }
+button:active,.btn:active,.tab:active,.navbtn:active,.social-btn:active{transform:scale(.97)}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+@media(max-width:760px){.reply-list{margin-left:9px;padding-left:9px}.workspace-tools>*{flex:1}.folder-chip{padding:11px}}
+</style>
+<div class="custom-dialog" id="folderDialog"><div class="custom-dialog-card"><h3 id="folderDialogTitle">Create folder</h3><p>Keep your scripts organized in your personal library.</p><input id="folderNameInput" maxlength="50" placeholder="Folder name"><textarea id="folderDescInput" maxlength="160" placeholder="Short description (optional)"></textarea><div class="row"><button class="btn primary" id="folderDialogSave">Create folder</button><button class="btn" id="folderDialogCancel">Cancel</button></div></div></div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/lua/lua.min.js"></script>
@@ -201,4 +232,113 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelect
 $("scriptGrid").addEventListener("click",e=>{const a=e.target.closest("[data-open]"),b=e.target.closest("[data-edit]");if(a)showScript(a.dataset.open);if(b)openEditor(scripts.find(s=>s.id===b.dataset.edit))});
 if(db){refreshUser().then(load);db.auth.onAuthStateChange(()=>{refreshUser().then(load)})}else{$("scriptGrid").innerHTML='<div class="empty">Almost ready! Add your Supabase Project URL and public anon/publishable key, then run the database setup from README.md.</div>'}
 </script>
+
+<script>
+/* ScriptHub creator features: folders, nested replies, post/folder/comment likes, custom UI feedback */
+let shFolders=[], shFolderFilter=null, shReplyTarget=null, shFolderDialogMode="create";
+const shOriginalLoad=load;
+function shSound(kind="tap"){
+ try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const c=shSound.ctx||(shSound.ctx=new C());if(c.state==="suspended")c.resume();const o=c.createOscillator(),g=c.createGain();o.type="sine";o.frequency.value=kind==="success"?660:kind==="like"?820:kind==="open"?520:360;g.gain.setValueAtTime(.0001,c.currentTime);g.gain.exponentialRampToValueAtTime(.035,c.currentTime+.012);g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+.11);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.12)}catch(e){}
+}
+const shToast=toast;
+toast=function(s){shToast(s);};
+document.addEventListener("click",e=>{const b=e.target.closest("button");if(b&&!b.disabled)shSound(b.classList.contains("primary")?"success":"tap")});
+function shDialog(show){$("folderDialog").classList.toggle("show",show)}
+function shFolderButton(){if(!user){toast("Sign in to create folders.");modal("authModal");return}shFolderDialogMode="create";$("folderDialogTitle").textContent="Create a folder";$("folderDialogSave").textContent="Create folder";$("folderNameInput").value="";$("folderDescInput").value="";shDialog(true)}
+async function shCreateFolder(){const name=$("folderNameInput").value.trim(),description=$("folderDescInput").value.trim();if(!name){toast("Enter a folder name.");return}const {error}=await db.from("folders").insert({owner_id:user.id,name,description});if(error){toast(error.message);return}shDialog(false);toast("Folder created!");await shLoad()}
+async function shLoad(){
+ if(!requireDb())return;
+ const fr=await db.from("folders").select("id,name,description,owner_id,created_at").order("created_at",{ascending:false});
+ if(fr.error){toast(fr.error.message);return}shFolders=fr.data||[];
+ let q=db.from("scripts").select("id,title,description,script_type,visibility,code,owner_id,created_at,folder_id").order("created_at",{ascending:false});
+ if(view==="mine"){if(!user){$("scriptGrid").innerHTML='<div class="empty">Sign in to see your scripts.</div>';return}q=q.eq("owner_id",user.id)}
+ else if(view==="liked"){if(!user){$("scriptGrid").innerHTML='<div class="empty">Sign in to see liked scripts.</div>';return}const {data:likes,error}=await db.from("script_likes").select("script_id").eq("user_id",user.id);if(error){toast(error.message);return}const ids=(likes||[]).map(x=>x.script_id);if(!ids.length){scripts=[];render();return}q=q.in("id",ids)}
+ else q=q.eq("visibility","public");
+ if(shFolderFilter)q=q.eq("folder_id",shFolderFilter);
+ if(kind!=="All")q=q.eq("script_type",kind);
+ const {data,error}=await q;if(error){toast(error.message);return}scripts=data||[];shRender();
+}
+function shRender(){
+ const term=$("search").value.toLowerCase(),list=scripts.filter(s=>(s.title+" "+(s.description||"")).toLowerCase().includes(term));
+ const folderName=id=>shFolders.find(f=>f.id===id)?.name||"Unfiled";
+ $("scriptGrid").innerHTML=list.length?list.map(s=>'<article class="card script"><h3>'+esc(s.title)+'</h3><p>'+esc(s.description||"No description provided.")+'</p><div class="meta"><span class="pill">'+esc(s.script_type)+'</span><span>📁 '+esc(folderName(s.folder_id))+'</span><span>'+(s.visibility==="private"?"🔒 Private":"🌐 Public")+'</span><span>'+new Date(s.created_at).toLocaleDateString()+'</span></div><div class="actions"><button class="btn small primary" data-open="'+s.id+'">View code</button>'+(user&&user.id===s.owner_id?'<button class="btn small" data-edit="'+s.id+'">Edit</button>':"")+'</div></article>').join(""):'<div class="empty">No scripts here yet. Create a script or choose another folder.</div>';
+}
+render=shRender;load=shLoad;
+function shWorkspace(){
+ const old=$("folderWorkspace");if(old)old.remove();
+ const box=document.createElement("section");box.id="folderWorkspace";box.className="card";box.style.cssText="padding:14px;margin:0 0 14px;background:#0b111b;border-color:#202b3b";
+ box.innerHTML='<div class="workspace-tools"><button class="btn primary small" id="addFolderBtn">＋ New folder</button><button class="btn small" id="allFoldersBtn">All folders</button></div><div id="folderList"></div>';
+ const main=document.querySelector("main");main.insertBefore(box,main.firstChild);
+ $("addFolderBtn").onclick=shFolderButton;$("allFoldersBtn").onclick=()=>{shFolderFilter=null;shLoad()};
+ shRenderFolders();
+}
+function shRenderFolders(){
+ const host=$("folderList");if(!host)return;
+ const mine=shFolders.filter(f=>f.owner_id===user?.id);
+ host.innerHTML=mine.length?mine.map(f=>'<div class="folder-chip" data-folder="'+f.id+'"><span><strong>📁 '+esc(f.name)+'</strong><br><small>'+esc(f.description||"Your collection")+'</small></span><span class="note">Open →</span></div>').join(""):'<div class="note" style="padding:8px 2px">No folders yet. Create one to organize your scripts.</div>';
+ host.querySelectorAll("[data-folder]").forEach(el=>el.onclick=()=>{shFolderFilter=el.dataset.folder;view="mine";document.querySelectorAll(".navbtn").forEach(b=>b.classList.toggle("active",b.dataset.view==="mine"));shLoad()});
+}
+const shOldEditor=openEditor;
+openEditor=function(s){
+ shOldEditor(s);
+ const select=document.createElement("div");select.className="field";select.innerHTML='<label>Save in folder</label><select id="scriptFolderSelect"><option value="">Unfiled</option>'+shFolders.filter(f=>f.owner_id===user?.id).map(f=>'<option value="'+f.id+'">'+esc(f.name)+'</option>').join("")+'</select><span class="note">Create folders from My scripts to organize your library.</span>';
+ const vis=$("scriptVisibility").parentElement;vis.parentElement.insertBefore(select,vis.parentElement.nextSibling);
+ $("scriptFolderSelect").value=s?.folder_id||"";
+};
+const shOldSave=save;
+save=async function(){
+ if(!requireDb()||!user)return;
+ const payload={title:$("scriptTitle").value.trim(),description:$("scriptDescription").value.trim(),script_type:$("scriptType").value,visibility:$("scriptVisibility").value,code:editor?editor.getValue():$("codeInput").value,owner_id:user.id,folder_id:$("scriptFolderSelect")?.value||null};
+ if(!payload.title){toast("Give your script a name.");return}
+ const result=editingId?await db.from("scripts").update(payload).eq("id",editingId).eq("owner_id",user.id):await db.from("scripts").insert(payload);
+ if(result.error){toast(result.error.message);return}modal("editModal",false);toast("Script saved!");await shLoad();
+};
+function shCommentTree(rows,parent=null){
+ return rows.filter(c=>(c.parent_id||null)===parent).map(c=>'<div class="comment" data-comment="'+c.id+'"><div class="comment-head"><strong>'+(c.user_id===user?.id?"You":"Community creator")+'</strong><span>· '+new Date(c.created_at).toLocaleString()+'</span></div><div class="comment-body">'+esc(c.body)+'</div><div class="social-actions"><button class="social-btn" data-comment-like="'+c.id+'">♡ <span id="clcount-'+c.id+'">0</span></button><button class="social-btn" data-reply="'+c.id+'">↳ Reply</button></div><div class="reply-list">'+shCommentTree(rows,c.id)+'</div></div>').join("");
+}
+async function shShowScript(id){
+ const s=scripts.find(x=>x.id===id);if(!s)return;selected=s;
+ $("viewTitle").textContent=s.title;$("viewDescription").textContent=s.description||"No description";$("viewMeta").textContent=s.script_type+" · "+(s.visibility==="public"?"Public":"Private");$("viewCode").textContent=s.code;$("comments").innerHTML="Loading conversation…";modal("viewModal");
+ const [cr,lr,pl]=await Promise.all([
+ db.from("comments").select("id,body,created_at,user_id,parent_id").eq("script_id",id).order("created_at"),
+ db.from("script_likes").select("user_id").eq("script_id",id),
+ user?db.from("script_likes").select("script_id").eq("script_id",id).eq("user_id",user.id).maybeSingle():Promise.resolve({data:null})
+ ]);
+ if(cr.error){$("comments").textContent=cr.error.message;return}
+ const rows=cr.data||[];$("comments").innerHTML=rows.length?shCommentTree(rows):'<p class="note">No comments yet. Start the conversation.</p>';
+ const commentIds=rows.map(x=>x.id);
+ const counts=commentIds.length?await db.from("comment_likes").select("comment_id,user_id").in("comment_id",commentIds):{data:[]};
+ (counts.data||[]).forEach(x=>{const n=$("clcount-"+x.comment_id);if(n)n.textContent=String(Number(n.textContent||0)+1)});
+ document.querySelectorAll("[data-comment-like]").forEach(b=>{const liked=(counts.data||[]).some(x=>x.comment_id===b.dataset.commentLike&&x.user_id===user?.id);b.classList.toggle("is-liked",liked);b.innerHTML=(liked?"♥":"♡")+' <span id="clcount-'+b.dataset.commentLike+'">'+(counts.data||[]).filter(x=>x.comment_id===b.dataset.commentLike).length+'</span>'});
+ $("likeBtn").textContent=pl.data?"♥ Liked · "+(lr.data||[]).length:"♡ Like · "+(lr.data||[]).length;
+ $("comments").querySelectorAll("[data-reply]").forEach(b=>b.onclick=()=>{shReplyTarget=b.dataset.reply;const node=b.closest(".comment");let form=node.querySelector(".reply-form");if(form){form.remove();return}form=document.createElement("div");form.className="reply-form";form.innerHTML='<input maxlength="500" placeholder="Write a reply…"><button class="btn small primary">Reply</button>';node.appendChild(form);form.querySelector("button").onclick=()=>shPostComment(form.querySelector("input").value,shReplyTarget)});
+ $("comments").querySelectorAll("[data-comment-like]").forEach(b=>b.onclick=()=>shToggleCommentLike(b.dataset.commentLike));
+}
+showScript=shShowScript;
+async function shPostComment(body,parentId=null){
+ if(!user){toast("Sign in to join the conversation.");modal("authModal");return}
+ body=body.trim();if(!body){toast("Write something first.");return}
+ const {error}=await db.from("comments").insert({script_id:selected.id,user_id:user.id,body,parent_id:parentId});
+ if(error){toast(error.message);return}toast(parentId?"Reply posted!":"Comment posted!");$("commentText").value="";await shShowScript(selected.id);
+}
+async function shToggleCommentLike(id){
+ if(!user){toast("Sign in to like comments.");modal("authModal");return}
+ const {data,error}=await db.from("comment_likes").select("comment_id").eq("comment_id",id).eq("user_id",user.id).maybeSingle();if(error){toast(error.message);return}
+ const r=data?await db.from("comment_likes").delete().eq("comment_id",id).eq("user_id",user.id):await db.from("comment_likes").insert({comment_id:id,user_id:user.id});
+ if(r.error){toast(r.error.message);return}await shShowScript(selected.id);
+}
+like=async function(){
+ if(!user){toast("Sign in to like posts.");modal("authModal");return}
+ const {data}=await db.from("script_likes").select("script_id").eq("script_id",selected.id).eq("user_id",user.id).maybeSingle();
+ const r=data?await db.from("script_likes").delete().eq("script_id",selected.id).eq("user_id",user.id):await db.from("script_likes").insert({script_id:selected.id,user_id:user.id});
+ if(r.error)toast(r.error.message);else await shShowScript(selected.id);
+};
+$("postComment").onclick=()=>shPostComment($("commentText").value,null);
+$("folderDialogSave").onclick=shCreateFolder;$("folderDialogCancel").onclick=()=>shDialog(false);
+const shOldRefresh=refreshUser;
+refreshUser=async function(){await shOldRefresh();};
+document.querySelectorAll(".navbtn").forEach(b=>b.addEventListener("click",()=>{shFolderFilter=null;if(b.dataset.view==="mine"){setTimeout(()=>{if(!$("folderWorkspace"))shWorkspace();else shRenderFolders()},120)}else{$("folderWorkspace")?.remove()}},{capture:false}));
+if(db){shLoad().then(()=>{if(view==="mine")shWorkspace()});}
+</script>
+
 </body></html>
