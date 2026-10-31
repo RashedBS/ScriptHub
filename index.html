@@ -28,7 +28,7 @@
 <script>
 /* Add your Supabase Project URL and anon/publishable key below. Never use a service_role key here. */
 const SUPABASE_URL = "https://atrsgsdxqjnbwoxjwlbn.supabase.co";
-const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_OR_PUBLISHABLE_KEY";
+const SUPABASE_ANON_KEY = "sb_publishable_RKMRjQH5Jawg_O2_c2db-g_p3n1vjPI";
 const configured = SUPABASE_URL.startsWith("https://") && !SUPABASE_URL.includes("YOUR_") && !SUPABASE_ANON_KEY.includes("YOUR_");
 const db = configured ? window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY) : null;
 let user=null, view="discover", kind="All", scripts=[], selected=null, editor=null, editingId=null;
