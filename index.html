@@ -2000,4 +2000,103 @@ $("sh4ProfileSave").onclick=async()=>{
 };
 
 </script>
+<script>
+
+/* ScriptHub 5.0 — creator identity backed by auth profile sync + restrained editorial UI. */
+const sh50css=document.createElement("style");
+sh50css.textContent=`
+:root{--bg:#080b10;--panel:#0d121a;--panel2:#111925;--line:#202b39;--text:#e7edf5;--muted:#929eae;--accent:#9ab8df;--accent2:#d6e2f2}
+html,body{background:#080b10!important;color:var(--text)!important}
+body{background-image:none!important;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif!important;letter-spacing:-.012em}
+header,.topbar,.navbar{background:#090d13!important;border-color:#1b2531!important;box-shadow:none!important}
+.card,.folder-chip,.modalbox,.side,.script{background:#0d131c!important;border:1px solid #202b39!important;box-shadow:none!important;border-radius:14px!important}
+.card:hover,.folder-chip:hover{border-color:#3a4b61!important;transform:translateY(-2px)}
+h1,h2,h3,strong{letter-spacing:-.025em}
+button,.btn{border-radius:9px!important;box-shadow:none!important;font-weight:600;letter-spacing:0}
+.btn.primary,button.primary{background:#d7e3f2!important;color:#101820!important;border:1px solid #d7e3f2!important}
+.btn:not(.primary),.social-btn{background:#121b27!important;border:1px solid #29384b!important;color:#c8d4e3!important}
+input,textarea,select{background:#080d14!important;border:1px solid #263344!important;border-radius:9px!important;color:#e7edf5!important}
+input:focus,textarea:focus,select:focus{border-color:#7e9fc9!important;box-shadow:0 0 0 3px #7e9fc91a!important;outline:0}
+.creator-line{display:flex;align-items:center;gap:9px;margin:10px 0 12px;color:#aeb9c8;font-size:13px}
+.creator-avatar{width:32px;height:32px;flex:0 0 32px;border-radius:50%;object-fit:cover;background:#1b2838;border:1px solid #34465d}
+.creator-line strong{font-size:13px;font-weight:650;color:#e3eaf4}
+.creator-avatar-fallback{width:32px;height:32px;flex:0 0 32px;border-radius:50%;background:#1a2635;color:#b7c9df;display:grid;place-items:center;border:1px solid #34465d;font-size:12px;font-weight:700}
+#viewModal .comment{background:#0a1018!important;border:1px solid #202c3a!important;border-radius:12px!important;padding:12px!important;margin:10px 0}
+#viewModal .comment-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#viewModal .comment-head .creator-line{margin:0}
+#viewModal .comment-head .creator-avatar{width:28px;height:28px;flex-basis:28px}
+#viewModal .comment-body{color:#d4dce8;line-height:1.6}
+#scriptGrid{gap:14px}
+#scriptGrid .meta{color:#8e9bac}
+.folder-name{display:block}
+.folder-name small{display:block;color:#8997a9;margin:5px 0 0}
+.sh50-icon{width:16px;height:16px;vertical-align:-3px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media(max-width:640px){#scriptGrid{grid-template-columns:1fr!important}.card{padding:16px!important}.creator-line{margin:8px 0}}
+`;
+document.head.appendChild(sh50css);
+function sh50Avatar(p){
+ const name=p?.display_name||p?.username||"Creator",url=p?.avatar_url;
+ const initial=Array.from(name.trim())[0]?.toUpperCase()||"C";
+ return '<div class="creator-line">'+(url?'<img class="creator-avatar" loading="lazy" referrerpolicy="no-referrer" src="'+esc(url)+'" alt="'+esc(name)+'">':'<span class="creator-avatar-fallback">'+esc(initial)+'</span>')+'<strong>'+esc(name)+'</strong></div>';
+}
+async function sh50ProfileMap(ids){
+ const keys=[...new Set((ids||[]).filter(Boolean))];if(!keys.length)return {};
+ const {data,error}=await db.from("profiles").select("id,username,display_name,avatar_url").in("id",keys);
+ if(error){console.error("Profile lookup failed:",error);return {}}
+ return Object.fromEntries((data||[]).map(p=>[p.id,p]));
+}
+async function sh50SyncOwnProfile(){
+ if(!user)return;
+ const m=user.user_metadata||{},name=m.display_name||m.username||user.email?.split("@")[0]||"Creator";
+ const {error}=await db.from("profiles").upsert({id:user.id,username:name,display_name:name,avatar_url:m.avatar_url||null},{onConflict:"id"});
+ if(error)console.error("Could not sync profile:",error.message);
+}
+/* Load all profile rows needed for visible script cards; render after data is available. */
+const sh50BaseRender=shRender;
+shRender=async function(){
+ await sh50BaseRender();
+ const cards=[...document.querySelectorAll("#scriptGrid .script")];
+ const byId=new Map(scripts.map(s=>[s.id,s]));
+ const map=await sh50ProfileMap(cards.map(c=>byId.get(c.querySelector("[data-open]")?.dataset.open)?.owner_id));
+ cards.forEach(c=>{
+  if(c.querySelector(".creator-line"))return;
+  const s=byId.get(c.querySelector("[data-open]")?.dataset.open);if(!s)return;
+  const meta=c.querySelector(".meta");if(meta)meta.insertAdjacentHTML("beforebegin",sh50Avatar(map[s.owner_id]));
+ });
+};
+render=shRender;
+/* Folder identity is based on folder.owner_id, never on the currently signed-in user. */
+const sh50BaseFolders=shRenderFolders;
+shRenderFolders=async function(){
+ await sh50BaseFolders();
+ const host=$("folderList");if(!host)return;
+ const map=await sh50ProfileMap(shFolders.map(f=>f.owner_id));
+ host.querySelectorAll("[data-folder]").forEach(card=>{
+  if(card.querySelector(".creator-line"))return;
+  const f=shFolders.find(x=>x.id===card.dataset.folder);if(!f)return;
+  const label=card.querySelector(".folder-name");
+  if(label){label.innerHTML='<svg class="sh50-icon" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg> '+esc(f.name)+'<small>'+esc(f.description||"Collection")+'</small>'+sh50Avatar(map[f.owner_id]);}
+ });
+};
+/* Creator names/photos on every nested comment and reply. */
+const sh50BaseComments=shV23RenderComments;
+shV23RenderComments=async function(scriptId){
+ await sh50BaseComments(scriptId);
+ const {data,error}=await db.from("comments").select("id,user_id").eq("script_id",scriptId);
+ if(error){console.error("Comment author lookup:",error.message);return}
+ const ids=(data||[]).map(c=>c.user_id),map=await sh50ProfileMap(ids);
+ const authors=Object.fromEntries((data||[]).map(c=>[c.id,map[c.user_id]]));
+ $("comments").querySelectorAll("[data-comment]").forEach(node=>{
+  const p=authors[node.dataset.comment],head=node.querySelector(".comment-head");if(!head||head.querySelector(".creator-line"))return;
+  const time=head.querySelector("span")?.outerHTML||"";
+  head.insertAdjacentHTML("afterbegin",sh50Avatar(p));if(time)head.innerHTML=sh50Avatar(p)+time;
+ });
+};
+/* Keep the public profile table updated after sign-in and profile changes. */
+const sh50RefreshUser=refreshUser;
+refreshUser=async function(){await sh50RefreshUser();await sh50SyncOwnProfile();sh4RefreshProfile()};
+const sh50ProfileSave=$("sh4ProfileSave").onclick;
+$("sh4ProfileSave").onclick=async()=>{await sh50ProfileSave();await sh50SyncOwnProfile()};
+
+</script>
 </body></html>
