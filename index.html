@@ -1478,4 +1478,145 @@ new MutationObserver(records=>records.forEach(r=>r.addedNodes.forEach(n=>{if(n.n
 
 </script>
 
+<script>
+
+/* ScriptHub 3.0 — saved playlists, comment moderation, code viewer and responsive dropdown repair */
+const shV30Style=document.createElement("style");
+shV30Style.textContent=`
+/* Dropdowns expand in document flow so they never cover neighboring fields. */
+#editModal .sh-select{z-index:2}
+#editModal .sh-select-menu{position:relative!important;top:auto!important;left:auto!important;right:auto!important;width:100%;margin-top:0;display:grid!important;max-height:0;opacity:0;visibility:hidden;overflow:hidden;transform:translateY(-5px);pointer-events:none;padding:0 6px;border-color:transparent;box-shadow:none;transition:max-height .28s ease,opacity .2s ease,transform .22s ease,padding .22s ease,border-color .2s ease,margin .22s ease}
+#editModal .sh-select-menu.open{max-height:220px;opacity:1;visibility:visible;overflow-y:auto;transform:none;pointer-events:auto;padding:6px;margin-top:7px;border-color:#344c70;box-shadow:0 12px 30px #0008}
+#editModal .sh-select-option{min-height:42px}
+#editModal .row:has(#scriptType){align-items:start}
+#editModal .field:has(#scriptFolderSelect){position:relative;z-index:1}
+#editModal .field:has(#scriptFolderSelect) .sh-select-menu{max-height:0}
+#editModal .field:has(#scriptFolderSelect) .sh-select-menu.open{max-height:180px}
+#editModal .CodeMirror{height:clamp(300px,48vh,560px);font-size:13px}
+#viewModal .view-code-shell{margin:16px 0;border:1px solid #263348;border-radius:12px;overflow:hidden;background:#080d15}
+#viewModal .view-code-toolbar{display:flex;justify-content:space-between;gap:10px;padding:9px 12px;border-bottom:1px solid #263348;color:#91a0b6;font-size:11px}
+#viewModal .view-code-shell .CodeMirror{height:auto;max-height:55vh;min-height:180px;border:0;border-radius:0;font:12px/1.65 'JetBrains Mono',monospace}
+#viewModal .view-code-shell .CodeMirror-gutters{background:#0b111c;border-right:1px solid #263348}
+#viewModal .view-code-shell .CodeMirror-linenumber{color:#63738c}
+#viewModal .comment-tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+#viewModal .comment-body{white-space:pre-wrap;overflow-wrap:anywhere}
+#viewModal .comment-editbox{width:100%;min-height:76px;margin-top:8px;padding:10px;background:#080e18;border:1px solid #344761;border-radius:9px;color:#edf3ff}
+#viewModal .owner-mod{color:#ff9bab}
+#savedWorkspace{margin:0 0 16px;padding:16px;border:1px solid #26364f;border-radius:14px;background:#0a111c}
+.saved-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.saved-playlist{border:1px solid #26364f;background:#0d1725;border-radius:11px;margin:9px 0;overflow:hidden}
+.saved-playlist-head{display:flex;align-items:center;gap:8px;padding:12px;width:100%;border:0;background:transparent;color:#edf3ff;text-align:left}
+.saved-playlist-head strong{flex:1}
+.saved-playlist-items{display:none;padding:0 12px 12px}
+.saved-playlist.open .saved-playlist-items{display:grid;gap:8px}
+.saved-item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px;background:#101d2d;border:1px solid #26364f;border-radius:9px;font-size:12px}
+.saved-item span{min-width:0;overflow-wrap:anywhere}
+.saved-actions{display:flex;gap:6px;flex-wrap:wrap}
+.saved-actions .btn{padding:6px 9px;font-size:11px}
+#saveToPlaylist{margin-left:6px}
+.brand{font-size:0!important;gap:9px!important}
+.brand:after{content:"ScriptHub";font-size:22px;font-weight:850;letter-spacing:-1.2px;background:linear-gradient(100deg,#f2f5ff 8%,#a9baff 55%,#7be0d2 100%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 24px #8298ff22}
+.brand-mark{width:38px;height:38px;border-radius:12px;background:linear-gradient(145deg,#7794ff,#5d6fd0 55%,#4bc8c0);box-shadow:0 7px 24px #7189ff35,inset 0 1px #ffffff55}
+@media(max-width:600px){#editModal .row:has(#scriptType){grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important}#editModal .sh-select-menu.open{max-height:190px}.brand:after{font-size:19px}.brand-mark{width:33px;height:33px}}
+`;
+document.head.appendChild(shV30Style);
+/* The Saved area is a first-class navigation view. */
+const nav=document.querySelector(".side");
+if(nav&&!nav.querySelector('[data-view="saved"]')){
+ const b=document.createElement("button");b.className="navbtn";b.dataset.view="saved";b.innerHTML='<span class="sh-vector-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4h12a2 2 0 0 1 2 2v15l-8-4-8 4V6a2 2 0 0 1 2-2Z"/></svg></span> Saved';nav.append(b);
+}
+const shOldNavLoad=shLoad;
+document.querySelectorAll(".navbtn").forEach(b=>b.addEventListener("click",()=>{
+ if(b.dataset.view==="saved"){document.querySelectorAll(".navbtn").forEach(x=>x.classList.toggle("active",x===b));view="saved";shSavedLoad()}
+}));
+async function shSavedLoad(){
+ if(!user){$("scriptGrid").innerHTML='<div class="empty">Sign in to access your saved playlists.</div>';return}
+ $("folderWorkspace")?.remove();$("publicCollections")?.remove();
+ let host=$("savedWorkspace");if(!host){host=document.createElement("section");host.id="savedWorkspace";$("scriptGrid").before(host)}
+ const p=await db.from("saved_playlists").select("id,name,created_at").eq("owner_id",user.id).order("created_at",{ascending:true});
+ if(p.error){host.innerHTML='<p class="note">Saved playlists need the database update below. '+esc(p.error.message)+'</p>';return}
+ const playlists=p.data||[];
+ host.innerHTML='<div class="saved-head"><div><strong>Saved playlists</strong><p class="note">Keep scripts and folders in separate collections.</p></div><button class="btn primary small" id="newSavedPlaylist">+ New playlist</button></div>'+playlists.map(x=>'<section class="saved-playlist" data-playlist="'+x.id+'"><button class="saved-playlist-head" type="button"><strong>'+esc(x.name)+'</strong><span class="note" data-playlist-count>Open</span><span>⌄</span></button><div class="saved-playlist-items"><div class="saved-actions"><button class="btn small" data-rename-playlist="'+x.id+'">Rename</button><button class="btn small owner-mod" data-delete-playlist="'+x.id+'">Delete playlist</button></div><div class="saved-item-list note">Loading saved items…</div></div></section>').join("")||'<p class="note">No playlists yet. Create one to start saving scripts and folders.</p>';
+ $("scriptGrid").innerHTML='<div class="empty">Your saved items will appear inside the playlists above.</div>';
+ $("newSavedPlaylist").onclick=async()=>{const name=prompt("Name your playlist");if(!name?.trim())return;const r=await db.from("saved_playlists").insert({owner_id:user.id,name:name.trim()});if(r.error)return toast(r.error.message);toast("Playlist created.");shSavedLoad()};
+ for(const section of host.querySelectorAll("[data-playlist]")){
+  const id=section.dataset.playlist,itemsHost=section.querySelector(".saved-item-list");
+  const items=await db.from("saved_playlist_items").select("id,item_type,item_id").eq("playlist_id",id).order("created_at",{ascending:false});
+  if(items.error){itemsHost.textContent="Could not load items: "+items.error.message;continue}
+  let entries=[];
+  for(const item of items.data||[]){
+   const table=item.item_type==="script"?"scripts":"folders";
+   const q=await db.from(table).select(item.item_type==="script"?"id,title,script_type":"id,name").eq("id",item.item_id).maybeSingle();
+   if(q.data)entries.push({item,data:q.data});
+  }
+  section.querySelector("[data-playlist-count]").textContent=entries.length+" saved";
+  itemsHost.innerHTML=entries.map(e=>'<div class="saved-item"><span>'+ (e.item.item_type==="script"?"Script · "+esc(e.data.title):"Folder · "+esc(e.data.name))+'</span><button class="btn small" data-remove-saved="'+e.item.id+'">Remove</button></div>').join("")||'<p class="note">Nothing saved here yet. Use Save on a script or folder.</p>';
+  section.querySelector(".saved-playlist-head").onclick=()=>section.classList.toggle("open");
+  section.querySelector("[data-rename-playlist]").onclick=async()=>{const name=prompt("New playlist name",playlists.find(x=>x.id===id)?.name||"");if(!name?.trim())return;const r=await db.from("saved_playlists").update({name:name.trim()}).eq("id",id).eq("owner_id",user.id);if(r.error)return toast(r.error.message);shSavedLoad()};
+  section.querySelector("[data-delete-playlist]").onclick=async()=>{if(!confirm("Delete this playlist and its saved items?"))return;const r=await db.from("saved_playlists").delete().eq("id",id).eq("owner_id",user.id);if(r.error)return toast(r.error.message);toast("Playlist deleted.");shSavedLoad()};
+  itemsHost.querySelectorAll("[data-remove-saved]").forEach(b=>b.onclick=async()=>{const r=await db.from("saved_playlist_items").delete().eq("id",b.dataset.removeSaved);if(r.error)return toast(r.error.message);shSavedLoad()});
+ }
+}
+async function shSaveItem(type,id){
+ if(!user){toast("Sign in to save items.");modal("authModal");return}
+ const p=await db.from("saved_playlists").select("id,name").eq("owner_id",user.id).order("created_at");
+ if(p.error)return toast("Saved playlists: "+p.error.message);
+ let playlists=p.data||[];
+ if(!playlists.length){const name=prompt("Create your first saved playlist");if(!name?.trim())return;const c=await db.from("saved_playlists").insert({owner_id:user.id,name:name.trim()}).select("id,name").single();if(c.error)return toast(c.error.message);playlists=[c.data]}
+ let chosen=playlists[0];
+ if(playlists.length>1){const choice=prompt("Choose playlist number:\n"+playlists.map((x,i)=>(i+1)+". "+x.name).join("\n"),"1");if(choice===null)return;chosen=playlists[Number(choice)-1];if(!chosen)return toast("Invalid playlist number.")}
+ const r=await db.from("saved_playlist_items").upsert({playlist_id:chosen.id,item_type:type,item_id:id},{onConflict:"playlist_id,item_type,item_id"});
+ if(r.error)return toast("Could not save: "+r.error.message);
+ toast("Saved to "+chosen.name+".");shSound("success");
+}
+function shAddSaveButton(target,type,id,label="Save"){
+ const b=document.createElement("button");b.type="button";b.className="btn small";b.textContent=label;b.onclick=()=>shSaveItem(type,id);target.append(b);return b;
+}
+/* Add save controls to script cards, folder tiles, and the script detail view. */
+const shSaveGridObserver=new MutationObserver(()=>{document.querySelectorAll("#scriptGrid [data-open]").forEach(b=>{const card=b.closest(".script");if(card&&!card.querySelector("[data-save-script]")){const x=shAddSaveButton(card.querySelector(".actions"),"script",b.dataset.open);x.dataset.saveScript="1"}})});
+shSaveGridObserver.observe($("scriptGrid"),{childList:true,subtree:true});
+const shFolderSaveObserver=new MutationObserver(()=>{document.querySelectorAll("#folderList [data-folder]").forEach(card=>{if(!card.querySelector("[data-save-folder]")){const x=shAddSaveButton(card,"folder",card.dataset.folder);x.dataset.saveFolder="1";x.onclick=e=>{e.stopPropagation();shSaveItem("folder",card.dataset.folder)}}})});
+if($("folderList"))shFolderSaveObserver.observe($("folderList"),{childList:true,subtree:true});
+const shShowV30=showScript;
+showScript=async function(id){
+ await shShowV30(id);
+ if(!$("saveToPlaylist")){const b=document.createElement("button");b.id="saveToPlaylist";b.className="btn small";b.textContent="Save";$("likeBtn").insertAdjacentElement("afterend",b);b.onclick=()=>shSaveItem("script",selected.id)}
+ const old=$("viewCode");if(!old||!selected?.code)return;
+ const code=selected.code;
+ old.classList.add("hidden");
+ let shell=$("viewCodeShell");
+ if(!shell){shell=document.createElement("div");shell.id="viewCodeShell";shell.className="view-code-shell";old.insertAdjacentElement("beforebegin",shell)}
+ shell.innerHTML='<div class="view-code-toolbar"><span>Lua source</span><span>'+code.split("\n").length+' lines</span></div><textarea id="viewCodeEditor"></textarea>';
+ if(window.CodeMirror){if(window.shViewEditor){window.shViewEditor.toTextArea();window.shViewEditor=null}window.shViewEditor=CodeMirror.fromTextArea($("viewCodeEditor"),{mode:"lua",theme:"material-darker",lineNumbers:true,readOnly:true,viewportMargin:Infinity});window.shViewEditor.setValue(code);window.shViewEditor.refresh()}
+};
+$("copyCode").onclick=async()=>{try{await navigator.clipboard.writeText(selected?.code||"");toast("Code copied!")}catch(e){toast("Copy was blocked by your browser.")}};
+/* Render comment edit/delete permissions: authors can edit their own; post owners can moderate all comments. */
+const shTreeV30=shCommentTree;
+shCommentTree=function(rows,likes,parent=null){
+ return rows.filter(c=>(c.parent_id||null)===parent).map(c=>{
+  const cl=likes.filter(x=>x.comment_id===c.id),liked=cl.some(x=>x.user_id===user?.id),owner=!!user&&selected?.owner_id===user.id,author=!!user&&c.user_id===user.id;
+  const controls=(author?'<button class="social-btn" data-edit-comment="'+c.id+'">Edit</button>':"")+(author||owner?'<button class="social-btn owner-mod" data-delete-comment="'+c.id+'">Delete</button>':"");
+  return '<div class="comment" data-comment="'+c.id+'"><div class="comment-head"><strong>'+(author?"You":"Community creator")+'</strong><span>· '+new Date(c.created_at).toLocaleString()+'</span></div><div class="comment-body">'+esc(c.body)+'</div><div class="social-actions"><button class="social-btn '+(liked?"is-liked":"")+'" data-comment-like="'+c.id+'">'+(liked?"♥":"♡")+' '+cl.length+'</button><button class="social-btn" data-reply="'+c.id+'">Reply</button>'+controls+'</div><div class="reply-list">'+shCommentTree(rows,likes,c.id)+'</div></div>';
+ }).join("");
+};
+const shRenderV30=shV23RenderComments;
+shV23RenderComments=async function(scriptId){
+ await shRenderV30(scriptId);
+ $("comments").querySelectorAll("[data-edit-comment]").forEach(b=>b.onclick=()=>{
+  const node=b.closest(".comment"),body=node.querySelector(".comment-body");if(node.querySelector(".comment-editbox"))return;
+  const area=document.createElement("textarea");area.className="comment-editbox";area.maxLength=500;area.value=body.textContent;body.after(area);
+  const save=document.createElement("button");save.className="social-btn";save.textContent="Save edit";area.after(save);
+  save.onclick=async()=>{const text=area.value.trim();if(!text)return toast("Comment cannot be empty.");const r=await db.from("comments").update({body:text}).eq("id",b.dataset.editComment).eq("user_id",user.id);if(r.error)return toast("Edit failed: "+r.error.message);toast("Comment updated.");await shV23RenderComments(scriptId)};
+ });
+ $("comments").querySelectorAll("[data-delete-comment]").forEach(b=>b.onclick=async()=>{
+  if(!confirm("Delete this comment and its replies?"))return;
+  const r=await db.from("comments").delete().eq("id",b.dataset.deleteComment);
+  if(r.error)return toast("Delete failed: "+r.error.message);
+  toast("Comment deleted.");await shV23RenderComments(scriptId);
+ });
+};
+const shLoadV30=shLoad;
+shLoad=async function(){if(view==="saved"){await shSavedLoad();return}await shLoadV30();$("savedWorkspace")?.remove()};
+
+</script>
 </body></html>
