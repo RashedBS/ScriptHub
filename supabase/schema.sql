@@ -202,3 +202,30 @@ for select using (
       and (s.visibility = 'public' or s.owner_id = auth.uid())
   )
 );
+
+-- Re-apply owner-only delete permissions for all user-generated content.
+alter table public.scripts
+  add column if not exists folder_id uuid references public.folders(id) on delete set null;
+alter table public.comments
+  add column if not exists parent_id uuid references public.comments(id) on delete cascade;
+
+drop policy if exists "Users delete own scripts" on public.scripts;
+create policy "Users delete own scripts" on public.scripts
+for delete using (auth.uid() = owner_id);
+
+drop policy if exists "Users delete own comments" on public.comments;
+create policy "Users delete own comments" on public.comments
+for delete using (auth.uid() = user_id);
+
+drop policy if exists "Users delete own folders" on public.folders;
+create policy "Users delete own folders" on public.folders
+for delete using (auth.uid() = owner_id);
+
+grant select, insert, update, delete on public.scripts to authenticated;
+grant select, insert, delete on public.comments to authenticated;
+grant select, insert, update, delete on public.folders to authenticated;
+grant select, insert, delete on public.script_likes, public.comment_likes, public.folder_likes to authenticated;
+grant select on public.scripts, public.comments, public.folders,
+  public.script_likes, public.comment_likes, public.folder_likes to anon;
+create index if not exists scripts_folder_idx on public.scripts(folder_id);
+create index if not exists comments_parent_idx on public.comments(parent_id, created_at);
