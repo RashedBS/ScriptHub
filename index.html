@@ -1618,5 +1618,130 @@ shV23RenderComments=async function(scriptId){
 const shLoadV30=shLoad;
 shLoad=async function(){if(view==="saved"){await shSavedLoad();return}await shLoadV30();$("savedWorkspace")?.remove()};
 
+
+/* ScriptHub 4.0 — accessible in-app dialogs, locked read-only code, profile identity and deeper dark UI */
+const sh4Style=document.createElement("style");
+sh4Style.textContent=`
+:root{--bg:#05070d;--panel:#0b101a;--panel2:#101827;--line:#1c293b;--muted:#8291a8;--text:#e8eef9}
+body{background:radial-gradient(ellipse at 15% -15%,#111b32 0,transparent 42%),#05070d!important}
+.top,.side,.card,.modalbox{background:#090e17!important;border-color:#1b2738!important}
+.hero{background:linear-gradient(120deg,#0b1220,#0b101a 65%,#101426)!important;border-color:#1b293d!important}
+.btn,.tab{background:#0e1725;border-color:#202e42;color:#dce6f5}
+.btn.primary{background:linear-gradient(110deg,#3559a7,#51458f)!important;box-shadow:0 7px 22px #304c8a22!important}
+.sh4-overlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:18px;background:#000b;backdrop-filter:blur(12px);opacity:0;visibility:hidden;transition:opacity .24s ease,visibility .24s ease}
+.sh4-overlay.open{opacity:1;visibility:visible}
+.sh4-dialog{width:min(440px,100%);max-height:88dvh;overflow:auto;padding:21px;border:1px solid #26364d;border-radius:18px;background:linear-gradient(145deg,#0d1420,#080d15);box-shadow:0 28px 100px #000c;transform:translateY(14px) scale(.975);transition:transform .28s cubic-bezier(.2,.8,.2,1)}
+.sh4-overlay.open .sh4-dialog{transform:translateY(0) scale(1)}
+.sh4-dialog h3{margin:0 0 7px;font-size:19px}
+.sh4-dialog p{color:#8796ad;font-size:13px;line-height:1.6}
+.sh4-dialog input,.sh4-dialog textarea{width:100%;padding:12px;margin:7px 0;background:#050a12;border:1px solid #24334a;border-radius:10px;color:#eaf1fb;outline:none}
+.sh4-dialog input:focus,.sh4-dialog textarea:focus{border-color:#6f88d8;box-shadow:0 0 0 3px #6f88d820}
+.sh4-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px}
+.sh4-choice{display:flex;align-items:center;gap:11px;width:100%;padding:13px;margin:6px 0;text-align:left;border:1px solid #223149;border-radius:11px;background:#0b1421;color:#e8eef9}
+.sh4-choice:hover{background:#121e30;border-color:#536a9b}
+.sh4-choice small{display:block;color:#8494ad;margin-top:3px}
+.sh4-avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;background:#17243a;border:1px solid #33445f;display:inline-grid;place-items:center;overflow:hidden;vertical-align:middle}
+.sh4-profile{display:flex;align-items:center;gap:10px}
+.sh4-profile-btn{border:1px solid #24344b;background:#0c1421;color:#dce6f5;border-radius:30px;padding:5px 11px 5px 5px;display:flex;align-items:center;gap:8px}
+.sh4-code-locked .CodeMirror-cursor,.sh4-code-locked .CodeMirror-selected{display:none!important}
+.sh4-code-locked .CodeMirror{user-select:text}
+.sh4-logo-mark{width:36px;height:36px;border-radius:11px;background:linear-gradient(145deg,#4568bd,#293d76);display:grid;place-items:center;box-shadow:inset 0 1px #ffffff24,0 6px 20px #304a8b30}
+.sh4-logo-mark svg{width:21px;height:21px;fill:none;stroke:#eaf0ff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.brand:after{content:"ScriptHub";font-weight:850;letter-spacing:-1.1px;background:linear-gradient(100deg,#f1f4ff,#9eb2e9);-webkit-background-clip:text;background-clip:text;color:transparent}
+.brand{font-size:0!important;gap:9px!important}
+@media(max-width:600px){.sh4-dialog{padding:17px}.sh4-overlay{padding:12px}.sh4-profile-btn .sh4-profile-name{display:none}}
+`;
+document.head.appendChild(sh4Style);
+/* Replace old branding with an original vector mark. */
+const brand=document.querySelector(".brand");
+if(brand){brand.innerHTML='<span class="sh4-logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></svg></span>';brand.setAttribute("aria-label","ScriptHub")}
+/* Reusable custom dialog. No browser prompt()/confirm() popups. */
+const sh4Overlay=document.createElement("div");sh4Overlay.className="sh4-overlay";sh4Overlay.id="sh4Overlay";sh4Overlay.innerHTML='<section class="sh4-dialog" role="dialog" aria-modal="true" aria-labelledby="sh4Title"><h3 id="sh4Title"></h3><p id="sh4Description"></p><div id="sh4Content"></div><div class="sh4-actions" id="sh4Actions"></div></section>';document.body.append(sh4Overlay);
+let sh4Resolve=null;
+function sh4Close(value=null){sh4Overlay.classList.remove("open");document.body.style.overflow="";const done=sh4Resolve;sh4Resolve=null;if(done)done(value)}
+function sh4Dialog({title,description="",content="",actions=[{label:"Cancel",value:null},{label:"Continue",value:true,primary:true}],input=false,placeholder="",initial=""}={}){
+ $("sh4Title").textContent=title||"";$("sh4Description").textContent=description;$("sh4Content").innerHTML=content;
+ if(input){$("sh4Content").innerHTML='<input id="sh4Input" maxlength="60" autocomplete="off" placeholder="'+esc(placeholder)+'">';$("sh4Input").value=initial||""}
+ $("sh4Actions").innerHTML="";actions.forEach(a=>{const b=document.createElement("button");b.className="btn"+(a.primary?" primary":"");b.textContent=a.label;b.onclick=()=>sh4Close(input&&a.value===true?$("sh4Input").value:a.value);$("sh4Actions").append(b)});
+ sh4Overlay.classList.add("open");document.body.style.overflow="hidden";if(input)setTimeout(()=>$("sh4Input")?.focus(),100);
+ return new Promise(resolve=>{sh4Resolve=resolve});
+}
+sh4Overlay.addEventListener("click",e=>{if(e.target===sh4Overlay)sh4Close(null)});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sh4Overlay.classList.contains("open"))sh4Close(null)});
+/* Playlist controls use custom animated dialogs, never native browser prompts. */
+async function sh4PlaylistName(title,initial=""){const v=await sh4Dialog({title,description:"Give this collection a name. You can change it later.",input:true,placeholder:"e.g. Useful UI systems",initial,actions:[{label:"Cancel",value:null},{label:"Save",value:true,primary:true}]});return typeof v==="string"?v.trim():null}
+async function sh4Confirm(title,description){return await sh4Dialog({title,description,actions:[{label:"Cancel",value:false},{label:"Delete",value:true,primary:true}]})}
+async function sh4ChoosePlaylist(items){const content=items.map((p,i)=>'<button class="sh4-choice" data-sh4-playlist="'+i+'"><span class="sh4-avatar"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 4h14v17l-7-4-7 4z"/></svg></span><span>'+esc(p.name)+'<small>Choose this playlist</small></span></button>').join("");const v=await sh4Dialog({title:"Save to playlist",description:"Pick where you want to keep this item.",content,actions:[{label:"Cancel",value:null}]});return v}
+sh4Overlay.addEventListener("click",e=>{const b=e.target.closest("[data-sh4-playlist]");if(b)sh4Close(Number(b.dataset.sh4Playlist))});
+shSavedLoad=async function(){
+ if(!user){$("scriptGrid").innerHTML='<div class="empty">Sign in to access your saved playlists.</div>';return}
+ $("folderWorkspace")?.remove();$("publicCollections")?.remove();
+ let host=$("savedWorkspace");if(!host){host=document.createElement("section");host.id="savedWorkspace";$("scriptGrid").before(host)}
+ const p=await db.from("saved_playlists").select("id,name,created_at").eq("owner_id",user.id).order("created_at",{ascending:true});
+ if(p.error){host.innerHTML='<p class="note">Saved playlists database setup is required: '+esc(p.error.message)+'</p>';return}
+ const playlists=p.data||[];
+ host.innerHTML='<div class="saved-head"><div><strong>Saved playlists</strong><p class="note">Your private collections.</p></div><button class="btn primary small" id="newSavedPlaylist">+ New playlist</button></div>'+playlists.map(x=>'<section class="saved-playlist" data-playlist="'+x.id+'"><button class="saved-playlist-head" type="button"><strong>'+esc(x.name)+'</strong><span class="note" data-playlist-count>Loading</span><span>⌄</span></button><div class="saved-playlist-items"><div class="saved-actions"><button class="btn small" data-rename-playlist="'+x.id+'">Rename</button><button class="btn small owner-mod" data-delete-playlist="'+x.id+'">Delete</button></div><div class="saved-item-list note">Loading…</div></div></section>').join("")||'<p class="note">No playlists yet. Create one to start saving.</p>';
+ $("scriptGrid").innerHTML='<div class="empty">Open a playlist above to view its saved items.</div>';
+ $("newSavedPlaylist").onclick=async()=>{const name=await sh4PlaylistName("Create playlist");if(!name)return;const r=await db.from("saved_playlists").insert({owner_id:user.id,name});if(r.error)return toast(r.error.message);toast("Playlist created.");shSavedLoad()};
+ for(const section of host.querySelectorAll("[data-playlist]")){
+  const id=section.dataset.playlist,itemsHost=section.querySelector(".saved-item-list");
+  const items=await db.from("saved_playlist_items").select("id,item_type,item_id").eq("playlist_id",id).order("created_at",{ascending:false});
+  if(items.error){itemsHost.textContent=items.error.message;continue}
+  const entries=[];
+  for(const item of items.data||[]){const table=item.item_type==="script"?"scripts":"folders";const q=await db.from(table).select(item.item_type==="script"?"id,title":"id,name").eq("id",item.item_id).maybeSingle();if(q.data)entries.push({item,data:q.data})}
+  section.querySelector("[data-playlist-count]").textContent=entries.length+" saved";
+  itemsHost.innerHTML=entries.map(e=>'<div class="saved-item"><span>'+ (e.item.item_type==="script"?"Script · "+esc(e.data.title):"Folder · "+esc(e.data.name))+'</span><button class="btn small" data-remove-saved="'+e.item.id+'">Remove</button></div>').join("")||'<p class="note">Nothing saved here yet.</p>';
+  section.querySelector(".saved-playlist-head").onclick=()=>section.classList.toggle("open");
+  section.querySelector("[data-rename-playlist]").onclick=async()=>{const name=await sh4PlaylistName("Rename playlist",playlists.find(x=>x.id===id)?.name||"");if(!name)return;const r=await db.from("saved_playlists").update({name}).eq("id",id).eq("owner_id",user.id);if(r.error)return toast(r.error.message);shSavedLoad()};
+  section.querySelector("[data-delete-playlist]").onclick=async()=>{if(!await sh4Confirm("Delete playlist?","This removes the playlist and its saved-item links. Your original scripts and folders stay untouched."))return;const r=await db.from("saved_playlists").delete().eq("id",id).eq("owner_id",user.id);if(r.error)return toast(r.error.message);toast("Playlist deleted.");shSavedLoad()};
+  itemsHost.querySelectorAll("[data-remove-saved]").forEach(b=>b.onclick=async()=>{const r=await db.from("saved_playlist_items").delete().eq("id",b.dataset.removeSaved);if(r.error)return toast(r.error.message);shSavedLoad()});
+ }
+};
+shSaveItem=async function(type,id){
+ if(!user){toast("Sign in to save items.");modal("authModal");return}
+ const p=await db.from("saved_playlists").select("id,name").eq("owner_id",user.id).order("created_at");
+ if(p.error)return toast(p.error.message);
+ let playlists=p.data||[];
+ if(!playlists.length){const name=await sh4PlaylistName("Create your first playlist");if(!name)return;const c=await db.from("saved_playlists").insert({owner_id:user.id,name}).select("id,name").single();if(c.error)return toast(c.error.message);playlists=[c.data]}
+ let chosen=playlists[0];
+ if(playlists.length>1){const choice=await sh4ChoosePlaylist(playlists);if(choice===null)return;chosen=playlists[choice];if(!chosen)return}
+ const r=await db.from("saved_playlist_items").upsert({playlist_id:chosen.id,item_type:type,item_id:id},{onConflict:"playlist_id,item_type,item_id"});
+ if(r.error)return toast("Could not save: "+r.error.message);toast("Saved to "+chosen.name+".");shSound("success")
+};
+/* Enforce read-only at every layer in the public code viewer. */
+const sh4ShowLocked=showScript;
+showScript=async function(id){
+ await sh4ShowLocked(id);
+ const code=selected?.code||"";
+ const old=$("viewCode");if(old){old.setAttribute("contenteditable","false");old.setAttribute("aria-readonly","true");old.addEventListener("beforeinput",e=>e.preventDefault());old.addEventListener("keydown",e=>{if(!["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Home","End","PageUp","PageDown","Control","Shift"].includes(e.key)&&!(e.ctrlKey||e.metaKey))e.preventDefault()})}
+ if(window.shViewEditor){window.shViewEditor.setOption("readOnly","nocursor");window.shViewEditor.getWrapperElement().classList.add("sh4-code-locked");window.shViewEditor.setValue(code);window.shViewEditor.refresh()}
+ const ta=$("viewCodeEditor");if(ta){ta.readOnly=true;ta.setAttribute("readonly","");ta.setAttribute("aria-readonly","true");ta.addEventListener("beforeinput",e=>e.preventDefault())}
+ const shell=$("viewCodeShell");if(shell){shell.classList.add("sh4-code-locked");shell.querySelectorAll("textarea").forEach(x=>{x.readOnly=true;x.setAttribute("readonly","")})}
+};
+/* Profile: display name + avatar upload from photo library, camera, or files. */
+const profileButton=document.createElement("button");profileButton.id="sh4ProfileButton";profileButton.className="sh4-profile-btn";profileButton.type="button";profileButton.innerHTML='<span class="sh4-avatar" id="sh4HeaderAvatar"> <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span><span class="sh4-profile-name" id="sh4HeaderName">Profile</span>';profileButton.onclick=sh4OpenProfile;
+$("authBtn").insertAdjacentElement("beforebegin",profileButton);
+const profileModal=document.createElement("div");profileModal.className="sh4-overlay";profileModal.id="sh4ProfileModal";profileModal.innerHTML='<section class="sh4-dialog" role="dialog" aria-modal="true"><h3>Edit profile</h3><p>Choose the name and avatar other people see on ScriptHub.</p><div class="sh4-profile" style="margin:15px 0"><img class="sh4-avatar" id="sh4ProfilePreview" alt="Profile picture" style="width:76px;height:76px"><div><strong id="sh4ProfileCurrentName"></strong><p>PNG, JPG, WEBP or GIF · max 4 MB</p></div></div><input id="sh4DisplayName" maxlength="32" placeholder="Your display name"><input id="sh4AvatarFile" type="file" accept="image/*" capture="user"><div class="sh4-actions"><button class="btn" id="sh4ProfileCancel">Cancel</button><button class="btn primary" id="sh4ProfileSave">Save profile</button></div></section>';document.body.append(profileModal);
+function sh4AvatarUrl(){return user?.user_metadata?.avatar_url||""}
+function sh4Display(){return user?.user_metadata?.display_name||user?.user_metadata?.username||user?.email?.split("@")[0]||"Creator"}
+function sh4RefreshProfile(){
+ const name=sh4Display(),url=sh4AvatarUrl();$("sh4HeaderName").textContent=name;$("sh4HeaderAvatar").innerHTML=url?'<img src="'+esc(url)+'" alt="" style="width:100%;height:100%;object-fit:cover">':'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';$("userLabel").textContent=name;
+}
+function sh4OpenProfile(){
+ if(!user){toast("Sign in first to set up your profile.");modal("authModal");return}
+ $("sh4DisplayName").value=sh4Display();$("sh4ProfileCurrentName").textContent=sh4Display();$("sh4ProfilePreview").src=sh4AvatarUrl()||"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'%3E%3Crect width='80' height='80' rx='40' fill='%2317243a'/%3E%3Ccircle cx='40' cy='29' r='13' fill='%23899ab7'/%3E%3Cpath d='M15 75c2-18 13-27 25-27s23 9 25 27' fill='%23899ab7'/%3E%3C/svg%3E";profileModal.classList.add("open");document.body.style.overflow="hidden"
+}
+function sh4CloseProfile(){profileModal.classList.remove("open");document.body.style.overflow=""}
+$("sh4ProfileCancel").onclick=sh4CloseProfile;profileModal.addEventListener("click",e=>{if(e.target===profileModal)sh4CloseProfile()});
+$("sh4ProfileSave").onclick=async()=>{
+ if(!user)return;const name=$("sh4DisplayName").value.trim();if(name.length<2)return toast("Display name must be at least 2 characters.");
+ const file=$("sh4AvatarFile").files[0];let avatar=sh4AvatarUrl();
+ if(file){if(!file.type.startsWith("image/"))return toast("Choose an image file.");if(file.size>4*1024*1024)return toast("Image must be 4 MB or smaller.");const ext=(file.name.split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"")||"jpg";const path=user.id+"/avatar-"+Date.now()+"."+ext;const up=await db.storage.from("avatars").upload(path,file,{upsert:true,contentType:file.type});if(up.error)return toast("Avatar upload failed: "+up.error.message);avatar=db.storage.from("avatars").getPublicUrl(path).data.publicUrl}
+ const update=await db.auth.updateUser({data:{display_name:name,username:name,avatar_url:avatar}});if(update.error)return toast(update.error.message);user=update.data.user||user;sh4RefreshProfile();sh4CloseProfile();toast("Profile updated.")
+};
+const sh4RefreshUser=refreshUser;
+refreshUser=async function(){await sh4RefreshUser();sh4RefreshProfile()};
+sh4RefreshProfile();
+
 </script>
 </body></html>
