@@ -439,3 +439,48 @@ for delete to authenticated using (
 grant select,insert,update,delete on public.comments to authenticated;
 grant select on public.comments to anon;
 grant select,insert,delete on public.comment_likes to authenticated;
+
+
+-- ScriptHub 4.2 FIX: remove recursive comments RLS policies.
+-- The previous INSERT policy queried public.comments from a policy on public.comments,
+-- causing: "infinite recursion detected in policy for relation comments".
+drop policy if exists "Signed-in users comment on visible scripts" on public.comments;
+drop policy if exists "Users reply on visible scripts" on public.comments;
+drop policy if exists "ScriptHub signed-in comment and reply" on public.comments;
+drop policy if exists "ScriptHub 4.1 insert comments and replies" on public.comments;
+drop policy if exists "ScriptHub 4.2 insert comments and replies" on public.comments;
+
+create or replace function public.comment_parent_matches(p_parent_id uuid, p_script_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.comments c
+    where c.id = p_parent_id
+      and c.script_id = p_script_id
+  );
+$$;
+revoke all on function public.comment_parent_matches(uuid,uuid) from public;
+grant execute on function public.comment_parent_matches(uuid,uuid) to authenticated;
+
+create policy "ScriptHub 4.2 insert comments and replies" on public.comments
+for insert to authenticated
+with check (
+  auth.uid() = user_id
+  and exists (
+    select 1 from public.scripts s
+    where s.id = comments.script_id
+      and s.visibility = 'public'
+  )
+  and (
+    parent_id is null
+    or public.comment_parent_matches(parent_id, script_id)
+  )
+);
+
+grant select, insert, update, delete on public.comments to authenticated;
+grant select on public.comments to anon;
