@@ -168,6 +168,60 @@ main{min-width:0}.mainhead{display:flex;align-items:center;justify-content:space
 <div class="modal" id="editModal"><div class="modalbox"><div class="modalhead"><h2 id="editTitle">Create a script</h2><button class="btn small" data-close="editModal">✕</button></div><div class="field"><label>Script name</label><input id="scriptTitle" maxlength="80" placeholder="e.g. Simple Leaderstats"></div><div class="field"><label>Description</label><textarea id="scriptDescription" maxlength="300" placeholder="What does this script do?"></textarea></div><div class="row"><div class="field"><label>Script type</label><select id="scriptType"><option>Script</option><option>LocalScript</option><option>ModuleScript</option></select></div><div class="field"><label>Visibility</label><select id="scriptVisibility"><option value="public">Public</option><option value="private">Private</option></select></div></div><div class="field"><label>Lua code</label><textarea id="codeInput">print("Hello, ScriptHub!")</textarea></div><div class="row"><button class="btn primary" id="saveScript">Publish script</button><button class="btn" data-close="editModal">Cancel</button></div><p class="note">Never paste passwords, API keys, or other secrets into a public script.</p></div></div>
 <div class="modal" id="viewModal"><div class="modalbox"><div class="modalhead"><h2 id="viewTitle">Script</h2><button class="btn small" data-close="viewModal">✕</button></div><p id="viewDescription" class="note"></p><div class="meta" id="viewMeta"></div><pre class="codeview" id="viewCode"></pre><div class="actions"><button class="btn small" id="copyCode">Copy code</button><button class="btn small" id="likeBtn">♡ Like</button></div><h3>Comments</h3><div id="comments"></div><div class="field"><label>Add a comment</label><textarea id="commentText" maxlength="500" placeholder="Write a helpful comment..."></textarea></div><button class="btn primary small" id="postComment">Post comment</button></div></div>
 <div id="toast" class="toast"></div>
+
+<style>
+/* ScriptHub app-like interaction layer */
+:root{--sh-bg:#070a11;--sh-surface:#0d1420;--sh-border:#26344a;--sh-muted:#91a0b6;--sh-accent:#8298ff}
+button,.btn,.tab,.navbtn,.social-btn,.folder-chip{ -webkit-tap-highlight-color:transparent;touch-action:manipulation}
+button,.btn,.tab,.navbtn,.social-btn{transition:background .18s,border-color .18s,color .18s,transform .18s,box-shadow .18s}
+button:active,.btn:active,.tab:active,.navbtn:active,.social-btn:active{transform:scale(.97)}
+.script,.folder-chip,.modalbox,.custom-dialog-card{animation:shRise .28s ease both}
+@keyframes shRise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+#folderWorkspace{padding:15px;margin:0 0 14px;background:#0a101a;border:1px solid #202d40;border-radius:14px}
+.workspace-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.workspace-head strong{font-size:13px;letter-spacing:.2px}
+.workspace-tools{display:flex;gap:7px;flex-wrap:wrap}
+.folder-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.folder-chip{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;padding:12px;background:#0e1725;border:1px solid #25344b;border-radius:11px;cursor:pointer}
+.folder-chip:hover{background:#142037;border-color:#647db5;transform:translateY(-2px)}
+.folder-chip.selected{border-color:#718cff;background:#17233a}
+.folder-chip .folder-name{min-width:0;overflow-wrap:anywhere;font-size:12px;font-weight:700;color:#e6edfa}
+.folder-chip small{display:block;color:#8392a8;font-size:10px;margin-top:4px}
+.folder-chip .folder-count{flex:0 0 auto;color:#a9b9d5;font-size:10px}
+.social-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:10px}
+.social-btn{background:#111b2a;border:1px solid #293950;color:#aebbd0;border-radius:8px;padding:7px 10px;font-size:11px;font-weight:700;cursor:pointer}
+.social-btn:hover{background:#1a2940;border-color:#627bb4}
+.social-btn.is-liked{color:#ff8da6;border-color:#774258;background:#2a1722}
+.comment{border-top:1px solid #202b3b;padding:12px 0}
+.comment-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:#8796ac;font-size:10px}
+.comment-head strong{color:#e1e9f6;font-size:11px}
+.comment-body{color:#c6d0df;font-size:13px;line-height:1.65;margin:7px 0}
+.reply-list{margin:9px 0 0 14px;padding-left:12px;border-left:1px solid #2a3950}
+.reply-form{display:flex;gap:7px;margin:9px 0 0}
+.reply-form input{min-width:0;flex:1;background:#080e17;border:1px solid #293950;color:#edf3ff;border-radius:8px;padding:10px}
+.custom-dialog{position:fixed;inset:0;z-index:50;background:#02040bdc;backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;padding:15px}
+.custom-dialog.show{display:flex}
+.custom-dialog-card{width:min(430px,100%);background:#0d1420;border:1px solid #33435e;border-radius:17px;padding:20px;box-shadow:0 25px 90px #000b}
+.custom-dialog-card h3{margin:0 0 7px;font-size:18px}
+.custom-dialog-card p{color:#9aa9be;font-size:12px;line-height:1.6;margin:0 0 12px}
+.custom-dialog-card input,.custom-dialog-card textarea{width:100%;background:#080e17;border:1px solid #2a3850;border-radius:9px;color:#f1f5fb;padding:12px;margin:6px 0 10px;outline:none}
+.custom-dialog-card input:focus,.custom-dialog-card textarea:focus{border-color:#718cff;box-shadow:0 0 0 3px #718cff18}
+.custom-dialog-actions{display:flex;gap:8px;margin-top:8px}
+.custom-dialog-actions>*{flex:1}
+#soundToggle{font-size:11px}
+#viewCode{font-family:'JetBrains Mono',monospace}
+@media(max-width:760px){.folder-grid{grid-template-columns:1fr}.workspace-head{align-items:flex-start;flex-direction:column}.reply-list{margin-left:7px;padding-left:9px}.custom-dialog-card{padding:17px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+</style>
+<div class="custom-dialog" id="folderDialog" aria-hidden="true">
+ <div class="custom-dialog-card" role="dialog" aria-modal="true" aria-labelledby="folderDialogTitle">
+  <h3 id="folderDialogTitle">Create a folder</h3><p>Give your scripts a tidy home in your library.</p>
+  <input id="folderNameInput" maxlength="50" placeholder="Folder name" autocomplete="off">
+  <textarea id="folderDescInput" maxlength="160" rows="3" placeholder="Description (optional)"></textarea>
+  <div class="custom-dialog-actions"><button class="btn primary" id="folderDialogSave">Create folder</button><button class="btn" id="folderDialogCancel">Cancel</button></div>
+ </div>
+</div>
+
 <style>
 /* Creator workspace + interaction polish */
 .workspace-tools{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
@@ -233,85 +287,155 @@ $("scriptGrid").addEventListener("click",e=>{const a=e.target.closest("[data-ope
 if(db){refreshUser().then(load);db.auth.onAuthStateChange(()=>{refreshUser().then(load)})}else{$("scriptGrid").innerHTML='<div class="empty">Almost ready! Add your Supabase Project URL and public anon/publishable key, then run the database setup from README.md.</div>'}
 </script>
 
+
 <script>
-/* ScriptHub creator features: folders, nested replies, post/folder/comment likes, custom UI feedback */
-let shFolders=[], shFolderFilter=null, shReplyTarget=null, shFolderDialogMode="create";
-const shOriginalLoad=load;
-function shSound(kind="tap"){
- try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const c=shSound.ctx||(shSound.ctx=new C());if(c.state==="suspended")c.resume();const o=c.createOscillator(),g=c.createGain();o.type="sine";o.frequency.value=kind==="success"?660:kind==="like"?820:kind==="open"?520:360;g.gain.setValueAtTime(.0001,c.currentTime);g.gain.exponentialRampToValueAtTime(.035,c.currentTime+.012);g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+.11);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.12)}catch(e){}
+/* ScriptHub features — folders, post/folder/comment/reply likes, custom dialogs and sound */
+let shFolders=[],shFolderFilter=null,shSoundEnabled=true,shSoundContext=null;
+const shBaseToast=toast;
+function shToast(message){shBaseToast(message)}
+function shSound(type="tap"){
+ if(!shSoundEnabled)return;
+ try{
+  const AudioCtx=window.AudioContext||window.webkitAudioContext;if(!AudioCtx)return;
+  if(!shSoundContext)shSoundContext=new AudioCtx();
+  if(shSoundContext.state==="suspended")shSoundContext.resume();
+  const ctx=shSoundContext,osc=ctx.createOscillator(),gain=ctx.createGain();
+  const freq=type==="success"?660:type==="like"?790:type==="open"?520:390;
+  osc.type="sine";osc.frequency.setValueAtTime(freq,ctx.currentTime);
+  gain.gain.setValueAtTime(.0001,ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(.025,ctx.currentTime+.012);
+  gain.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+.095);
+  osc.connect(gain);gain.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+.1);
+ }catch(e){}
 }
-const shToast=toast;
-toast=function(s){shToast(s);};
-document.addEventListener("click",e=>{const b=e.target.closest("button");if(b&&!b.disabled)shSound(b.classList.contains("primary")?"success":"tap")});
-function shDialog(show){$("folderDialog").classList.toggle("show",show)}
-function shFolderButton(){if(!user){toast("Sign in to create folders.");modal("authModal");return}shFolderDialogMode="create";$("folderDialogTitle").textContent="Create a folder";$("folderDialogSave").textContent="Create folder";$("folderNameInput").value="";$("folderDescInput").value="";shDialog(true)}
-async function shCreateFolder(){const name=$("folderNameInput").value.trim(),description=$("folderDescInput").value.trim();if(!name){toast("Enter a folder name.");return}const {error}=await db.from("folders").insert({owner_id:user.id,name,description});if(error){toast(error.message);return}shDialog(false);toast("Folder created!");await shLoad()}
+document.addEventListener("click",e=>{const b=e.target.closest("button");if(b&&!b.disabled&&!b.dataset.noSound)shSound(b.classList.contains("primary")?"success":"tap")});
+function shDialog(show){
+ const d=$("folderDialog");d.classList.toggle("show",show);d.setAttribute("aria-hidden",String(!show));
+ if(show)setTimeout(()=>$("folderNameInput").focus(),50);
+}
+function shOpenFolderDialog(){
+ if(!user){toast("Sign in to create folders.");modal("authModal");return}
+ $("folderDialogTitle").textContent="Create a folder";$("folderDialogSave").textContent="Create folder";
+ $("folderNameInput").value="";$("folderDescInput").value="";shDialog(true);
+}
+async function shCreateFolder(){
+ if(!user)return;
+ const name=$("folderNameInput").value.trim(),description=$("folderDescInput").value.trim();
+ if(!name){toast("Enter a folder name.");$("folderNameInput").focus();return}
+ const {error}=await db.from("folders").insert({owner_id:user.id,name,description});
+ if(error){toast(error.message);return}
+ shDialog(false);toast("Folder created!");shSound("success");await shLoad();
+}
 async function shLoad(){
  if(!requireDb())return;
- const fr=await db.from("folders").select("id,name,description,owner_id,created_at").order("created_at",{ascending:false});
- if(fr.error){toast(fr.error.message);return}shFolders=fr.data||[];
+ shFolders=[];
+ if(user){
+  const fr=await db.from("folders").select("id,name,description,owner_id,created_at").eq("owner_id",user.id).order("created_at",{ascending:false});
+  if(fr.error){toast("Folders: "+fr.error.message);return}
+  shFolders=fr.data||[];
+ }
  let q=db.from("scripts").select("id,title,description,script_type,visibility,code,owner_id,created_at,folder_id").order("created_at",{ascending:false});
- if(view==="mine"){if(!user){$("scriptGrid").innerHTML='<div class="empty">Sign in to see your scripts.</div>';return}q=q.eq("owner_id",user.id)}
- else if(view==="liked"){if(!user){$("scriptGrid").innerHTML='<div class="empty">Sign in to see liked scripts.</div>';return}const {data:likes,error}=await db.from("script_likes").select("script_id").eq("user_id",user.id);if(error){toast(error.message);return}const ids=(likes||[]).map(x=>x.script_id);if(!ids.length){scripts=[];render();return}q=q.in("id",ids)}
- else q=q.eq("visibility","public");
+ if(view==="mine"){if(!user){$("scriptGrid").innerHTML='<div class="empty">Sign in to see your scripts and folders.</div>';shWorkspace();return}q=q.eq("owner_id",user.id)}
+ else if(view==="liked"){
+  if(!user){$("scriptGrid").innerHTML='<div class="empty">Sign in to see liked scripts.</div>';return}
+  const {data:likes,error}=await db.from("script_likes").select("script_id").eq("user_id",user.id);
+  if(error){toast(error.message);return}
+  const ids=(likes||[]).map(x=>x.script_id);if(!ids.length){scripts=[];shRender();return}q=q.in("id",ids);
+ }else q=q.eq("visibility","public");
  if(shFolderFilter)q=q.eq("folder_id",shFolderFilter);
  if(kind!=="All")q=q.eq("script_type",kind);
- const {data,error}=await q;if(error){toast(error.message);return}scripts=data||[];shRender();
+ const {data,error}=await q;if(error){toast(error.message);return}
+ scripts=data||[];shRender();if(view==="mine")shWorkspace();else $("folderWorkspace")?.remove();
 }
-function shRender(){
- const term=$("search").value.toLowerCase(),list=scripts.filter(s=>(s.title+" "+(s.description||"")).toLowerCase().includes(term));
+async function shRender(){
+ const term=$("search").value.toLowerCase();
+ const list=scripts.filter(s=>(s.title+" "+(s.description||"")).toLowerCase().includes(term));
+ const ids=list.map(s=>s.id);
+ const likeResult=ids.length?await db.from("script_likes").select("script_id,user_id").in("script_id",ids):{data:[]};
+ const allLikes=likeResult.data||[];
+ const myLikes=new Set(allLikes.filter(x=>x.user_id===user?.id).map(x=>x.script_id));
  const folderName=id=>shFolders.find(f=>f.id===id)?.name||"Unfiled";
- $("scriptGrid").innerHTML=list.length?list.map(s=>'<article class="card script"><h3>'+esc(s.title)+'</h3><p>'+esc(s.description||"No description provided.")+'</p><div class="meta"><span class="pill">'+esc(s.script_type)+'</span><span>📁 '+esc(folderName(s.folder_id))+'</span><span>'+(s.visibility==="private"?"🔒 Private":"🌐 Public")+'</span><span>'+new Date(s.created_at).toLocaleDateString()+'</span></div><div class="actions"><button class="btn small primary" data-open="'+s.id+'">View code</button>'+(user&&user.id===s.owner_id?'<button class="btn small" data-edit="'+s.id+'">Edit</button>':"")+'</div></article>').join(""):'<div class="empty">No scripts here yet. Create a script or choose another folder.</div>';
+ $("scriptGrid").innerHTML=list.length?list.map(s=>{
+  const count=allLikes.filter(x=>x.script_id===s.id).length,liked=myLikes.has(s.id);
+  return '<article class="card script"><h3>'+esc(s.title)+'</h3><p>'+esc(s.description||"No description provided.")+'</p><div class="meta"><span class="pill">'+esc(s.script_type)+'</span><span>📁 '+esc(folderName(s.folder_id))+'</span><span>'+(s.visibility==="private"?"🔒 Private":"🌐 Public")+'</span><span>'+new Date(s.created_at).toLocaleDateString()+'</span></div><div class="actions"><button class="btn small primary" data-open="'+s.id+'">View code</button>'+(user&&user.id===s.owner_id?'<button class="btn small" data-edit="'+s.id+'">Edit</button>':"")+'<button class="social-btn '+(liked?"is-liked":"")+'" data-post-like="'+s.id+'">'+(liked?"♥":"♡")+' '+count+'</button></div></article>';
+ }).join(""):'<div class="empty">No scripts here yet. Create a script or choose another folder.</div>';
 }
 render=shRender;load=shLoad;
 function shWorkspace(){
- const old=$("folderWorkspace");if(old)old.remove();
- const box=document.createElement("section");box.id="folderWorkspace";box.className="card";box.style.cssText="padding:14px;margin:0 0 14px;background:#0b111b;border-color:#202b3b";
- box.innerHTML='<div class="workspace-tools"><button class="btn primary small" id="addFolderBtn">＋ New folder</button><button class="btn small" id="allFoldersBtn">All folders</button></div><div id="folderList"></div>';
- const main=document.querySelector("main");main.insertBefore(box,main.firstChild);
- $("addFolderBtn").onclick=shFolderButton;$("allFoldersBtn").onclick=()=>{shFolderFilter=null;shLoad()};
+ let box=$("folderWorkspace");
+ if(!box){box=document.createElement("section");box.id="folderWorkspace";box.innerHTML='<div class="workspace-head"><strong>YOUR FOLDERS</strong><div class="workspace-tools"><button class="btn primary small" id="addFolderBtn">＋ New folder</button><button class="btn small" id="allFoldersBtn">All scripts</button><button class="btn small" id="soundToggle">Sound: On</button></div></div><div class="folder-grid" id="folderList"></div>';const main=document.querySelector("main");main.insertBefore(box,main.firstChild)}
+ $("addFolderBtn").onclick=shOpenFolderDialog;$("allFoldersBtn").onclick=()=>{shFolderFilter=null;shLoad()};
+ $("soundToggle").textContent="Sound: "+(shSoundEnabled?"On":"Off");$("soundToggle").onclick=()=>{shSoundEnabled=!shSoundEnabled;$("soundToggle").textContent="Sound: "+(shSoundEnabled?"On":"Off");if(shSoundEnabled)shSound("success")};
  shRenderFolders();
 }
-function shRenderFolders(){
+async function shRenderFolders(){
  const host=$("folderList");if(!host)return;
- const mine=shFolders;
- host.innerHTML=mine.length?mine.map(f=>'<div class="folder-chip" data-folder="'+f.id+'"><span><strong>📁 '+esc(f.name)+'</strong><br><small>'+esc(f.description||"Your collection")+'</small></span><span class="note">Open →</span></div>').join(""):'<div class="note" style="padding:8px 2px">No folders yet. Create one to organize your scripts.</div>';
- host.querySelectorAll("[data-folder]").forEach(el=>el.onclick=()=>{shFolderFilter=el.dataset.folder;const target=shFolders.find(f=>f.id===el.dataset.folder);view=target?.owner_id===user?.id?"mine":"discover";document.querySelectorAll(".navbtn").forEach(b=>b.classList.toggle("active",b.dataset.view===view));shLoad()});
+ if(!shFolders.length){host.innerHTML='<div class="note">No folders yet. Tap “New folder” to create your first collection.</div>';return}
+ const ids=shFolders.map(f=>f.id);
+ const [scriptRows,likesRows]=await Promise.all([
+  db.from("scripts").select("folder_id").in("folder_id",ids),
+  db.from("folder_likes").select("folder_id,user_id").in("folder_id",ids)
+ ]);
+ const scriptData=scriptRows.data||[],likes=likesRows.data||[];
+ host.innerHTML=shFolders.map(f=>{
+  const count=scriptData.filter(s=>s.folder_id===f.id).length,folderLikes=likes.filter(x=>x.folder_id===f.id),liked=folderLikes.some(x=>x.user_id===user?.id);
+  return '<div class="folder-chip '+(shFolderFilter===f.id?"selected":"")+'" data-folder="'+f.id+'"><span class="folder-name">📁 '+esc(f.name)+'<small>'+esc(f.description||"Your collection")+'</small></span><span class="folder-count">'+count+' scripts</span><button class="social-btn '+(liked?"is-liked":"")+'" data-folder-like="'+f.id+'">'+(liked?"♥":"♡")+' '+folderLikes.length+'</button></div>';
+ }).join("");
+ host.querySelectorAll("[data-folder]").forEach(el=>el.onclick=e=>{
+  if(e.target.closest("[data-folder-like]"))return;
+  shFolderFilter=el.dataset.folder;shLoad();
+ });
+ host.querySelectorAll("[data-folder-like]").forEach(b=>b.onclick=async e=>{
+  e.stopPropagation();if(!user){toast("Sign in to like folders.");modal("authModal");return}
+  const id=b.dataset.folderLike;
+  const {data,error}=await db.from("folder_likes").select("folder_id").eq("folder_id",id).eq("user_id",user.id).maybeSingle();
+  if(error){toast(error.message);return}
+  const result=data?await db.from("folder_likes").delete().eq("folder_id",id).eq("user_id",user.id):await db.from("folder_likes").insert({folder_id:id,user_id:user.id});
+  if(result.error)toast(result.error.message);else{shSound("like");shRenderFolders()}
+ });
 }
-const shOldEditor=openEditor;
+const shBaseOpenEditor=openEditor;
 openEditor=function(s){
- shOldEditor(s);
- const select=document.createElement("div");select.className="field";select.innerHTML='<label>Save in folder</label><select id="scriptFolderSelect"><option value="">Unfiled</option>'+shFolders.filter(f=>f.owner_id===user?.id).map(f=>'<option value="'+f.id+'">'+esc(f.name)+'</option>').join("")+'</select><span class="note">Create folders from My scripts to organize your library.</span>';
- const vis=$("scriptVisibility").parentElement;vis.parentElement.insertBefore(select,vis.parentElement.nextSibling);
- $("scriptFolderSelect").value=s?.folder_id||"";
+ shBaseOpenEditor(s);
+ $("scriptFolderSelect")?.parentElement.remove();
+ const field=document.createElement("div");field.className="field";field.innerHTML='<label>Save in folder</label><select id="scriptFolderSelect"><option value="">Unfiled</option>'+shFolders.map(f=>'<option value="'+f.id+'">'+esc(f.name)+'</option>').join("")+'</select>';
+ const anchor=$("scriptVisibility").parentElement.parentElement;anchor.insertAdjacentElement("afterend",field);
+ $("scriptFolderSelect").value=s?.folder_id||shFolderFilter||"";
 };
-const shOldSave=save;
 save=async function(){
  if(!requireDb()||!user)return;
  const payload={title:$("scriptTitle").value.trim(),description:$("scriptDescription").value.trim(),script_type:$("scriptType").value,visibility:$("scriptVisibility").value,code:editor?editor.getValue():$("codeInput").value,owner_id:user.id,folder_id:$("scriptFolderSelect")?.value||null};
  if(!payload.title){toast("Give your script a name.");return}
  const result=editingId?await db.from("scripts").update(payload).eq("id",editingId).eq("owner_id",user.id):await db.from("scripts").insert(payload);
- if(result.error){toast(result.error.message);return}modal("editModal",false);toast("Script saved!");await shLoad();
+ if(result.error){toast(result.error.message);return}
+ modal("editModal",false);toast(editingId?"Script updated!":"Script published!");shSound("success");await shLoad();
 };
-function shCommentTree(rows,parent=null){
- return rows.filter(c=>(c.parent_id||null)===parent).map(c=>'<div class="comment" data-comment="'+c.id+'"><div class="comment-head"><strong>'+(c.user_id===user?.id?"You":"Community creator")+'</strong><span>· '+new Date(c.created_at).toLocaleString()+'</span></div><div class="comment-body">'+esc(c.body)+'</div><div class="social-actions"><button class="social-btn" data-comment-like="'+c.id+'">♡ <span id="clcount-'+c.id+'">0</span></button><button class="social-btn" data-reply="'+c.id+'">↳ Reply</button></div><div class="reply-list">'+shCommentTree(rows,c.id)+'</div></div>').join("");
+function shCommentTree(rows,likes,parent=null){
+ return rows.filter(c=>(c.parent_id||null)===parent).map(c=>{
+  const commentLikes=likes.filter(x=>x.comment_id===c.id),liked=commentLikes.some(x=>x.user_id===user?.id);
+  return '<div class="comment" data-comment="'+c.id+'"><div class="comment-head"><strong>'+(c.user_id===user?.id?"You":"Community creator")+'</strong><span>· '+new Date(c.created_at).toLocaleString()+'</span></div><div class="comment-body">'+esc(c.body)+'</div><div class="social-actions"><button class="social-btn '+(liked?"is-liked":"")+'" data-comment-like="'+c.id+'">'+(liked?"♥":"♡")+' '+commentLikes.length+'</button><button class="social-btn" data-reply="'+c.id+'">↳ Reply</button></div><div class="reply-list">'+shCommentTree(rows,likes,c.id)+'</div></div>';
+ }).join("");
 }
 async function shShowScript(id){
  const s=scripts.find(x=>x.id===id);if(!s)return;selected=s;
- $("viewTitle").textContent=s.title;$("viewDescription").textContent=s.description||"No description";$("viewMeta").textContent=s.script_type+" · "+(s.visibility==="public"?"Public":"Private");$("viewCode").textContent=s.code;$("comments").innerHTML="Loading conversation…";modal("viewModal");
+ $("viewTitle").textContent=s.title;$("viewDescription").textContent=s.description||"No description";$("viewMeta").textContent=s.script_type+" · "+(s.visibility==="public"?"Public":"Private");$("viewCode").textContent=s.code;$("comments").innerHTML='<p class="note">Loading conversation…</p>';modal("viewModal");
  const [cr,lr,pl]=await Promise.all([
- db.from("comments").select("id,body,created_at,user_id,parent_id").eq("script_id",id).order("created_at"),
- db.from("script_likes").select("user_id").eq("script_id",id),
- user?db.from("script_likes").select("script_id").eq("script_id",id).eq("user_id",user.id).maybeSingle():Promise.resolve({data:null})
+  db.from("comments").select("id,body,created_at,user_id,parent_id").eq("script_id",id).order("created_at"),
+  db.from("script_likes").select("user_id").eq("script_id",id),
+  user?db.from("script_likes").select("script_id").eq("script_id",id).eq("user_id",user.id).maybeSingle():Promise.resolve({data:null})
  ]);
  if(cr.error){$("comments").textContent=cr.error.message;return}
- const rows=cr.data||[];$("comments").innerHTML=rows.length?shCommentTree(rows):'<p class="note">No comments yet. Start the conversation.</p>';
- const commentIds=rows.map(x=>x.id);
- const counts=commentIds.length?await db.from("comment_likes").select("comment_id,user_id").in("comment_id",commentIds):{data:[]};
- (counts.data||[]).forEach(x=>{const n=$("clcount-"+x.comment_id);if(n)n.textContent=String(Number(n.textContent||0)+1)});
- document.querySelectorAll("[data-comment-like]").forEach(b=>{const liked=(counts.data||[]).some(x=>x.comment_id===b.dataset.commentLike&&x.user_id===user?.id);b.classList.toggle("is-liked",liked);b.innerHTML=(liked?"♥":"♡")+' <span id="clcount-'+b.dataset.commentLike+'">'+(counts.data||[]).filter(x=>x.comment_id===b.dataset.commentLike).length+'</span>'});
- $("likeBtn").textContent=pl.data?"♥ Liked · "+(lr.data||[]).length:"♡ Like · "+(lr.data||[]).length;
- $("comments").querySelectorAll("[data-reply]").forEach(b=>b.onclick=()=>{shReplyTarget=b.dataset.reply;const node=b.closest(".comment");let form=node.querySelector(".reply-form");if(form){form.remove();return}form=document.createElement("div");form.className="reply-form";form.innerHTML='<input maxlength="500" placeholder="Write a reply…"><button class="btn small primary">Reply</button>';node.appendChild(form);form.querySelector("button").onclick=()=>shPostComment(form.querySelector("input").value,shReplyTarget)});
+ const rows=cr.data||[],commentIds=rows.map(x=>x.id);
+ const likesResult=commentIds.length?await db.from("comment_likes").select("comment_id,user_id").in("comment_id",commentIds):{data:[]};
+ if(likesResult.error){toast("Comment likes: "+likesResult.error.message)}
+ const likes=likesResult.data||[];
+ $("comments").innerHTML=rows.length?shCommentTree(rows,likes):'<p class="note">No comments yet. Start the conversation!</p>';
+ $("likeBtn").textContent=(pl.data?"♥ Liked":"♡ Like")+" · "+(lr.data||[]).length;
+ $("comments").querySelectorAll("[data-reply]").forEach(b=>b.onclick=()=>{
+  const node=b.closest(".comment");let form=node.querySelector(".reply-form");if(form){form.remove();return}
+  form=document.createElement("div");form.className="reply-form";form.innerHTML='<input maxlength="500" placeholder="Write a reply…" aria-label="Write a reply"><button class="btn small primary">Reply</button>';node.appendChild(form);
+  form.querySelector("button").onclick=()=>shPostComment(form.querySelector("input").value,b.dataset.reply);
+ });
  $("comments").querySelectorAll("[data-comment-like]").forEach(b=>b.onclick=()=>shToggleCommentLike(b.dataset.commentLike));
 }
 showScript=shShowScript;
@@ -319,43 +443,38 @@ async function shPostComment(body,parentId=null){
  if(!user){toast("Sign in to join the conversation.");modal("authModal");return}
  body=body.trim();if(!body){toast("Write something first.");return}
  const {error}=await db.from("comments").insert({script_id:selected.id,user_id:user.id,body,parent_id:parentId});
- if(error){toast(error.message);return}toast(parentId?"Reply posted!":"Comment posted!");$("commentText").value="";await shShowScript(selected.id);
+ if(error){toast(error.message);return}
+ $("commentText").value="";toast(parentId?"Reply posted!":"Comment posted!");shSound("success");await shShowScript(selected.id);
 }
 async function shToggleCommentLike(id){
- if(!user){toast("Sign in to like comments.");modal("authModal");return}
- const {data,error}=await db.from("comment_likes").select("comment_id").eq("comment_id",id).eq("user_id",user.id).maybeSingle();if(error){toast(error.message);return}
- const r=data?await db.from("comment_likes").delete().eq("comment_id",id).eq("user_id",user.id):await db.from("comment_likes").insert({comment_id:id,user_id:user.id});
- if(r.error){toast(r.error.message);return}await shShowScript(selected.id);
+ if(!user){toast("Sign in to like comments and replies.");modal("authModal");return}
+ const {data,error}=await db.from("comment_likes").select("comment_id").eq("comment_id",id).eq("user_id",user.id).maybeSingle();
+ if(error){toast(error.message);return}
+ const result=data?await db.from("comment_likes").delete().eq("comment_id",id).eq("user_id",user.id):await db.from("comment_likes").insert({comment_id:id,user_id:user.id});
+ if(result.error){toast(result.error.message);return}shSound("like");await shShowScript(selected.id);
 }
 like=async function(){
  if(!user){toast("Sign in to like posts.");modal("authModal");return}
- const {data}=await db.from("script_likes").select("script_id").eq("script_id",selected.id).eq("user_id",user.id).maybeSingle();
- const r=data?await db.from("script_likes").delete().eq("script_id",selected.id).eq("user_id",user.id):await db.from("script_likes").insert({script_id:selected.id,user_id:user.id});
- if(r.error)toast(r.error.message);else await shShowScript(selected.id);
+ const {data,error}=await db.from("script_likes").select("script_id").eq("script_id",selected.id).eq("user_id",user.id).maybeSingle();
+ if(error){toast(error.message);return}
+ const result=data?await db.from("script_likes").delete().eq("script_id",selected.id).eq("user_id",user.id):await db.from("script_likes").insert({script_id:selected.id,user_id:user.id});
+ if(result.error)toast(result.error.message);else{shSound("like");await shShowScript(selected.id);await shLoad()}
 };
 $("postComment").onclick=()=>shPostComment($("commentText").value,null);
 $("folderDialogSave").onclick=shCreateFolder;$("folderDialogCancel").onclick=()=>shDialog(false);
-const shOldRefresh=refreshUser;
-refreshUser=async function(){await shOldRefresh();};
-document.querySelectorAll(".navbtn").forEach(b=>b.addEventListener("click",()=>{shFolderFilter=null;if(b.dataset.view==="mine"){setTimeout(()=>{if(!$("folderWorkspace"))shWorkspace();else shRenderFolders()},120)}else{$("folderWorkspace")?.remove()}},{capture:false}));
-if(db){shLoad().then(()=>{if(view==="mine")shWorkspace()});}
-</script>
-
-
-<script>
-async function shRenderFolders(){
- const host=$("folderList");if(!host)return;
- const mine=shFolders.filter(f=>f.owner_id===user?.id);
- const ids=mine.map(f=>f.id);
- const likes=ids.length?await db.from("folder_likes").select("folder_id,user_id").in("folder_id",ids):{data:[]};
- const all=likes.data||[];
- host.innerHTML=mine.length?mine.map(f=>{
-  const n=all.filter(x=>x.folder_id===f.id).length,liked=all.some(x=>x.folder_id===f.id&&x.user_id===user?.id);
-  return '<div class="folder-chip" data-folder="'+f.id+'"><span><strong>📁 '+esc(f.name)+'</strong><br><small>'+esc(f.description||"Your collection")+' · '+n+' likes</small></span><span class="social-btn '+(liked?"is-liked":"")+'" data-folder-like="'+f.id+'">'+(liked?"♥":"♡")+'</span></div>';
- }).join(""):'<div class="note" style="padding:8px 2px">No folders yet. Create one to organize your scripts.</div>';
- host.querySelectorAll("[data-folder]").forEach(el=>el.onclick=e=>{if(e.target.closest("[data-folder-like]"))return;shFolderFilter=el.dataset.folder;view="mine";document.querySelectorAll(".navbtn").forEach(b=>b.classList.toggle("active",b.dataset.view==="mine"));shLoad()});
- host.querySelectorAll("[data-folder-like]").forEach(b=>b.onclick=async e=>{e.stopPropagation();if(!user){toast("Sign in to like folders.");modal("authModal");return}const id=b.dataset.folderLike;const {data}=await db.from("folder_likes").select("folder_id").eq("folder_id",id).eq("user_id",user.id).maybeSingle();const r=data?await db.from("folder_likes").delete().eq("folder_id",id).eq("user_id",user.id):await db.from("folder_likes").insert({folder_id:id,user_id:user.id});if(r.error)toast(r.error.message);else shRenderFolders()});
-}
+$("folderDialog").addEventListener("click",e=>{if(e.target.id==="folderDialog")shDialog(false)});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("folderDialog").classList.contains("show"))shDialog(false)});
+$("scriptGrid").addEventListener("click",async e=>{
+ const b=e.target.closest("[data-post-like]");if(!b)return;
+ if(!user){toast("Sign in to like posts.");modal("authModal");return}
+ const id=b.dataset.postLike,{data,error}=await db.from("script_likes").select("script_id").eq("script_id",id).eq("user_id",user.id).maybeSingle();
+ if(error){toast(error.message);return}
+ const result=data?await db.from("script_likes").delete().eq("script_id",id).eq("user_id",user.id):await db.from("script_likes").insert({script_id:id,user_id:user.id});
+ if(result.error)toast(result.error.message);else{shSound("like");await shLoad()}
+});
+const shOriginalNav=document.querySelectorAll(".navbtn");
+shOriginalNav.forEach(b=>b.addEventListener("click",()=>{shFolderFilter=null;if(b.dataset.view!=="mine")$("folderWorkspace")?.remove()},{capture:false}));
+if(db){shLoad().then(()=>{if(view==="mine")shWorkspace()})}
 </script>
 
 </body></html>
