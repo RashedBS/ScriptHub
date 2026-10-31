@@ -1842,4 +1842,37 @@ avatarFile.addEventListener("change",()=>sh41Preview(avatarFile.files[0]));
 cameraInput.addEventListener("change",()=>{if(cameraInput.files[0]){const dt=new DataTransfer();dt.items.add(cameraInput.files[0]);avatarFile.files=dt.files;sh41Preview(cameraInput.files[0])}});
 
 </script>
+<script>
+
+/* ScriptHub 4.2 polish: animate every modal/toast in and out, deeper dark surfaces. */
+const sh42=document.createElement("style");
+sh42.textContent=`
+:root{--bg:#03060c;--panel:#080e18;--panel2:#0c1421;--line:#1b293c;--muted:#8492a8;--text:#eaf0fb}
+body{background:radial-gradient(ellipse at 50% -30%,#111d36 0,transparent 52%),#03060c!important;color:#eaf0fb}
+.card,.side,.modalbox,.script,.folder-card{background:#080e18!important;border-color:#1a283a!important}
+.modal{display:flex!important;opacity:0;visibility:hidden;pointer-events:none;background:#0000;backdrop-filter:blur(0);transition:opacity .24s ease,visibility .24s ease,background .24s ease,backdrop-filter .24s ease}
+.modal.show{opacity:1;visibility:visible;pointer-events:auto;background:#02050bdc;backdrop-filter:blur(9px)}
+.modalbox{transform:translateY(16px) scale(.975);opacity:0;transition:transform .28s cubic-bezier(.2,.8,.2,1),opacity .22s ease!important}
+.modal.show .modalbox{transform:translateY(0) scale(1);opacity:1}
+.toast{display:block!important;opacity:0;visibility:hidden;pointer-events:none;transform:translate(-50%,12px) scale(.97);transition:opacity .2s ease,transform .24s cubic-bezier(.2,.8,.2,1),visibility .2s ease!important}
+.toast.show{opacity:1;visibility:visible;transform:translate(-50%,0) scale(1)}
+.sh4-overlay{transition:opacity .26s ease,visibility .26s ease!important}
+.sh4-dialog{transition:transform .3s cubic-bezier(.2,.8,.2,1),opacity .24s ease!important;opacity:0}
+.sh4-overlay.open .sh4-dialog{opacity:1}
+button,.btn,.navbtn,.tab{transition:background .18s ease,border-color .18s ease,color .18s ease,transform .2s cubic-bezier(.2,.8,.2,1),box-shadow .2s ease}
+button:active,.btn:active{transform:scale(.975)}
+input,textarea{color-scheme:dark}
+@media(prefers-reduced-motion:reduce){.modal,.modalbox,.toast,.sh4-overlay,.sh4-dialog,button,.btn{transition:none!important}}
+`;
+document.head.appendChild(sh42);
+/* Keep the existing modal API but make show/hide transitions actually render. */
+const sh42Modal=modal;
+modal=function(id,show=true){
+ const el=$(id);if(!el)return;
+ if(show){el.classList.add("show");el.setAttribute("aria-hidden","false")}
+ else{el.classList.remove("show");el.setAttribute("aria-hidden","true")}
+};
+/* Reuse the existing modal API for the page; do not change its callers. */
+
+</script>
 </body></html>
