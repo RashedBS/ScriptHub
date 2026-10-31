@@ -496,3 +496,53 @@ drop policy if exists "Users update own profile" on public.profiles;
 create policy "Users update own profile" on public.profiles for update to authenticated using (auth.uid()=id) with check (auth.uid()=id);
 grant select on public.profiles to anon,authenticated;
 grant update on public.profiles to authenticated;
+
+
+-- ScriptHub 5.0: reliable public profile rows for every existing and new account.
+alter table public.profiles add column if not exists display_name text;
+alter table public.profiles add column if not exists avatar_url text;
+alter table public.profiles enable row level security;
+drop policy if exists "Profiles are publicly readable" on public.profiles;
+create policy "Profiles are publicly readable" on public.profiles
+for select to anon,authenticated using (true);
+drop policy if exists "Users create own profile" on public.profiles;
+create policy "Users create own profile" on public.profiles
+for insert to authenticated with check (auth.uid()=id);
+drop policy if exists "Users update own profile" on public.profiles;
+create policy "Users update own profile" on public.profiles
+for update to authenticated using (auth.uid()=id) with check (auth.uid()=id);
+grant select on public.profiles to anon,authenticated;
+grant insert,update on public.profiles to authenticated;
+
+-- Backfill accounts that already exist so their names/avatars can be displayed publicly.
+insert into public.profiles(id,username,display_name,avatar_url)
+select u.id,
+       coalesce(nullif(u.raw_user_meta_data->>'display_name',''),nullif(u.raw_user_meta_data->>'username',''),split_part(u.email,'@',1)),
+       coalesce(nullif(u.raw_user_meta_data->>'display_name',''),nullif(u.raw_user_meta_data->>'username',''),split_part(u.email,'@',1)),
+       nullif(u.raw_user_meta_data->>'avatar_url','')
+from auth.users u
+on conflict(id) do update set
+ username=excluded.username,
+ display_name=coalesce(nullif(excluded.display_name,''),profiles.display_name),
+ avatar_url=coalesce(nullif(excluded.avatar_url,''),profiles.avatar_url);
+
+-- Keep public profiles in sync when a user changes their profile metadata.
+create or replace function public.sync_script_hub_profile()
+returns trigger language plpgsql security definer set search_path=public
+as $$
+begin
+ insert into public.profiles(id,username,display_name,avatar_url)
+ values(new.id,
+  coalesce(nullif(new.raw_user_meta_data->>'display_name',''),nullif(new.raw_user_meta_data->>'username',''),split_part(new.email,'@',1)),
+  coalesce(nullif(new.raw_user_meta_data->>'display_name',''),nullif(new.raw_user_meta_data->>'username',''),split_part(new.email,'@',1)),
+  nullif(new.raw_user_meta_data->>'avatar_url',''))
+ on conflict(id) do update set
+  username=excluded.username,
+  display_name=excluded.display_name,
+  avatar_url=coalesce(excluded.avatar_url,profiles.avatar_url);
+ return new;
+end;
+$$;
+drop trigger if exists script_hub_profile_sync on auth.users;
+create trigger script_hub_profile_sync after insert or update of raw_user_meta_data on auth.users
+for each row execute function public.sync_script_hub_profile();
