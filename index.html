@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ScriptHub — Roblox Lua Community</title>
-<meta name="theme-color" content="#090d18">
+<meta name="theme-color" content="#07090f">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
@@ -97,6 +97,63 @@ main{width:100%;min-width:0}
  .navbtn{padding:10px 11px;font-size:12px}
  .mainhead{margin-top:3px}
 }
+
+
+/* Midnight dark redesign */
+:root{color-scheme:dark;--bg:#07090f;--panel:#0c111b;--panel2:#121a28;--line:#202b3b;--muted:#8997ac;--text:#f1f5fb;--blue:#8298ff;--cyan:#63dbc9}
+html,body{width:100%;max-width:100%;overflow-x:hidden;background:#07090f!important;color:#f1f5fb}
+body{background:radial-gradient(ellipse at 50% -25%,#172039 0,transparent 42%),#07090f!important}
+.top{height:66px;padding:0 14px;background:#080b12f5!important;border-color:#202a3a;gap:10px}
+.brand{font-size:20px;display:flex;align-items:center;gap:8px}.brand:before{content:"</>";display:grid;place-items:center;width:33px;height:33px;border-radius:10px;background:linear-gradient(145deg,#7189ff,#7863c9);font:800 12px 'JetBrains Mono';box-shadow:0 0 20px #7189ff25}.brand span{color:#77dfd2}
+.topright{min-width:0;max-width:55%;gap:7px}#userLabel{max-width:min(230px,32vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#authBtn{flex:0 0 auto}
+.wrap{width:100%;max-width:1180px;padding:34px 22px 60px}
+.hero{display:block;position:relative;overflow:hidden;min-height:0;padding:38px 38px 34px;margin:0 0 22px;border:1px solid #26334a;border-radius:19px;background:linear-gradient(115deg,#101827,#0b111c 70%,#101925);box-shadow:0 18px 55px #0005}
+.hero:after{width:260px;height:260px;right:4%;top:-150px;border-color:#8298ff20;box-shadow:0 0 0 24px #8298ff08,0 0 0 50px #8298ff05,0 0 80px #8298ff12}
+.hero>div{max-width:670px}.eyebrow{font-size:10px;letter-spacing:2px;color:#79d9ce}
+.hero h1{font-size:clamp(36px,5vw,55px);line-height:1.05;letter-spacing:-2.5px;margin:15px 0 13px}
+.hero h1 em{background:linear-gradient(90deg,#9aaeff,#75dcd0);-webkit-background-clip:text;background-clip:text}
+.hero p{font-size:14px;line-height:1.8;color:#9aa8bc;max-width:570px}
+.layout{grid-template-columns:205px minmax(0,1fr);gap:20px}
+.side{background:#0b1019;border:1px solid #1d2737;border-radius:14px;padding:8px;box-shadow:none}
+.navbtn{font-size:12px;font-weight:650;color:#8e9bb0;padding:12px;border-radius:9px}
+.navbtn.active{background:#19243a;color:#e7edff;box-shadow:inset 0 0 0 1px #34476a}
+.navbtn:hover{background:#151e2d;color:white;transform:none}
+main{min-width:0}.mainhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 13px}
+.tabs{display:flex;flex-wrap:nowrap;gap:6px;min-width:0;max-width:100%;overflow-x:auto;scrollbar-width:none}.tabs::-webkit-scrollbar,.side::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;background:#0d131e;border:1px solid #202b3c;color:#9aa8bc;padding:9px 12px;border-radius:8px;font-size:11px;font-weight:650}
+.tab.active{background:#1b2942;border-color:#52699a;color:#edf2ff;box-shadow:none}
+.btn{background:#111927;border:1px solid #273348;color:#dce5f5;border-radius:9px;font-size:12px;font-weight:650;transition:background .18s,border-color .18s,transform .18s}
+.btn:hover{background:#192438;border-color:#52658b;transform:translateY(-1px);filter:none}
+.btn.primary{background:#647ee8;border:1px solid #8298ff;color:white;box-shadow:0 5px 18px #536edc25}
+.btn.primary:hover{background:#7890f4}
+.search{height:46px;margin:0 0 14px;padding:0 15px;background:#0b1019;border:1px solid #202b3b;border-radius:10px;color:#edf3ff;font-size:12px;box-shadow:none}
+.search::placeholder{color:#65738a}.search:focus,.field input:focus,.field textarea:focus,.field select:focus{border-color:#667fc7;box-shadow:0 0 0 3px #718cff14}
+.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.script{padding:17px;background:#0c121d;border:1px solid #1e2939;border-radius:13px;box-shadow:none;transition:border-color .18s,transform .18s,background .18s}
+.script:before{width:2px;background:#7b94f5}.script:hover{background:#101827;border-color:#43577e;box-shadow:0 10px 28px #0004;transform:translateY(-2px)}
+.script h3{font-size:14px;color:#edf2fc}.script p{font-size:12px;line-height:1.65;color:#8f9db2}
+.meta{color:#8190a6;font-size:10px}.pill{background:#141f32;border-color:#2d3d5a;color:#b3c5ff}
+.empty{background:#0b1019;border:1px dashed #29364a;color:#8593a9;border-radius:13px}
+.modal{background:#02040acb;backdrop-filter:blur(10px)}.modalbox{background:#0d131e;border:1px solid #2b3850;border-radius:16px;box-shadow:0 28px 90px #000b}
+.modalhead{border-bottom:1px solid #202b3b;padding-bottom:13px}.field label{color:#b8c5d8;font-size:12px;font-weight:650}
+.field input,.field textarea,.field select{background:#080d15;border:1px solid #273348;color:#edf2fc;border-radius:9px}
+.CodeMirror{background:#080d15;border:1px solid #263348;border-radius:10px}.codeview{background:#080d15;border:1px solid #263348;color:#dce6f7;border-radius:10px}
+.comment{border-color:#202b3b}.comment p{color:#c3cede}.note{color:#8391a6}
+.toast{background:#121e30;border:1px solid #3c5278;color:#f1f5fb}
+@media(max-width:760px){
+.top{height:62px;padding:0 11px}.brand{font-size:18px;gap:7px}.brand:before{width:30px;height:30px}
+.topright{max-width:54%}#userLabel{max-width:calc(100vw - 175px);font-size:10px}
+.wrap{padding:19px 13px 40px}.hero{padding:25px 20px;margin-bottom:16px;border-radius:15px}
+.hero h1{font-size:clamp(34px,9vw,43px);letter-spacing:-1.9px}.hero p{font-size:12px;line-height:1.75}
+.layout{grid-template-columns:minmax(0,1fr);gap:13px}
+.side{display:flex;flex-direction:row;overflow-x:auto;overflow-y:hidden;gap:4px;white-space:nowrap;padding:6px}
+.navbtn{flex:0 0 auto;width:auto;white-space:nowrap;padding:10px 11px;margin:0;font-size:11px}
+.mainhead{display:flex;flex-direction:column;align-items:stretch;gap:8px}
+.tabs{width:100%;padding:0 0 5px;overflow-x:auto}#refreshBtn{align-self:flex-start}
+.grid{grid-template-columns:minmax(0,1fr)}.script{padding:15px}
+.modal{padding:10px}.modalbox{padding:17px;max-height:94vh}
+}
+@media(min-width:761px){.side{position:sticky;top:88px}}
 
 </style>
 </head>
