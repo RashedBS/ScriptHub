@@ -928,6 +928,127 @@ showScript=async function(id){
 
 
 
+
+/* ScriptHub v2.2: responsive editor layout + stable social interactions */
+const shResponsiveFix=document.createElement("style");
+shResponsiveFix.textContent=`
+/* Keep editor fields in a real two-column row, with folder selector on its own full row. */
+#editModal .modalbox{width:min(900px,calc(100vw - 32px));max-width:900px;padding:clamp(16px,2.5vw,28px)}
+#editModal .modalhead h2{font-size:clamp(22px,3vw,30px)}
+#editModal .row:has(#scriptType){display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:14px!important;align-items:start}
+#editModal .row:has(#scriptType)>.field{min-width:0;width:100%;margin:12px 0}
+#editModal .row:has(#scriptType)>.field .sh-select{width:100%;min-width:0}
+#editModal .row:has(#scriptType)>.field .sh-select-trigger{width:100%;min-width:0}
+#editModal .field:has(#scriptFolderSelect){display:grid!important;grid-template-columns:minmax(0,1fr)!important;width:100%!important;min-width:0!important;margin:12px 0!important}
+#editModal .field:has(#scriptFolderSelect) .sh-select{width:100%;min-width:0}
+#editModal .sh-select-menu{left:0;right:0;max-width:100%;z-index:100;max-height:240px}
+#editModal .CodeMirror{width:100%;max-width:100%;height:clamp(260px,42vh,520px);font-size:13px}
+#editModal .CodeMirror-scroll{max-width:100%}
+#editModal .row:has(#saveScript){display:flex;flex-wrap:wrap}
+#editModal .row:has(#saveScript)>button{flex:1 1 150px;min-width:0}
+#viewModal .modalbox{width:min(860px,calc(100vw - 32px));max-width:860px}
+#viewModal #comments{display:grid;gap:10px}
+#viewModal .comment{padding:12px;border:1px solid #202d40;border-radius:11px;background:#0a111b}
+#viewModal .reply-list{margin:10px 0 0 12px;padding-left:12px;border-left:2px solid #2b4264}
+#viewModal .social-btn.is-liked{color:#ff536d!important;background:#32121f!important;border-color:#8c354b!important}
+#scriptGrid .social-btn.is-liked{color:#ff536d!important;background:#32121f!important;border-color:#8c354b!important}
+#scriptGrid .social-btn{min-height:38px}
+@media(min-width:1000px){
+ #editModal .modalbox{width:min(920px,calc(100vw - 80px))}
+ #editModal .CodeMirror{height:460px}
+}
+@media(max-width:600px){
+ #editModal .modalbox{width:calc(100vw - 18px);padding:15px}
+ #editModal .row:has(#scriptType){grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important}
+ #editModal .field label{font-size:12px}
+ #editModal .sh-select-trigger{min-height:54px;padding:10px;font-size:13px}
+ #editModal .CodeMirror{height:300px;font-size:12px}
+ #viewModal .modalbox{width:calc(100vw - 18px);padding:15px}
+}
+`;
+document.head.appendChild(shResponsiveFix);
+/* Move the custom folder selector below the Script type / Visibility pair. */
+const shEditorBefore=openEditor;
+openEditor=function(s){
+ shEditorBefore(s);
+ const picker=$("scriptFolderSelect")?.closest(".field");
+ const typeRow=$("scriptType")?.closest(".row");
+ if(picker&&typeRow){picker.remove();typeRow.insertAdjacentElement("afterend",picker)}
+};
+/* Re-render comments/replies from the selected public post and report DB errors clearly. */
+async function shSocialRefresh(id){
+ const {data:rows,error}=await db.from("comments").select("id,body,created_at,user_id,parent_id").eq("script_id",id).order("created_at",{ascending:true});
+ if(error){$("comments").innerHTML='<p class="note">Could not load comments: '+esc(error.message)+'</p>';return}
+ const ids=(rows||[]).map(x=>x.id);
+ const likeResult=ids.length?await db.from("comment_likes").select("comment_id,user_id").in("comment_id",ids):{data:[],error:null};
+ if(likeResult.error){$("comments").innerHTML='<p class="note">Could not load comment likes: '+esc(likeResult.error.message)+'</p>';return}
+ $("comments").innerHTML=rows?.length?shCommentTree(rows,likeResult.data||[]):'<p class="note">No comments yet. Start the conversation.</p>';
+ $("comments").querySelectorAll("[data-reply]").forEach(b=>b.onclick=()=>{
+  if(!user){toast("Sign in to reply.");modal("authModal");return}
+  let form=b.closest(".comment").querySelector(":scope > .reply-form");
+  if(form){form.remove();return}
+  form=document.createElement("div");form.className="reply-form";
+  form.innerHTML='<input maxlength="500" placeholder="Write a reply…" aria-label="Write a reply"><button type="button" class="btn small primary">Reply</button>';
+  b.closest(".comment").appendChild(form);
+  form.querySelector("button").onclick=async()=>{
+   const input=form.querySelector("input");
+   await shPostComment(input.value,b.dataset.reply);
+  };
+ });
+ $("comments").querySelectorAll("[data-comment-like]").forEach(b=>b.onclick=()=>shToggleCommentLike(b.dataset.commentLike));
+}
+showScript=async function(id){
+ let s=scripts.find(x=>x.id===id);
+ if(!s){const r=await db.from("scripts").select("id,title,description,script_type,visibility,code,owner_id,created_at,folder_id").eq("id",id).maybeSingle();if(r.error||!r.data){toast("Could not open this script.");return}s=r.data}
+ selected=s;
+ $("viewTitle").textContent=s.title;$("viewDescription").textContent=s.description||"No description provided.";
+ $("viewMeta").textContent=s.script_type+" · "+(s.visibility==="public"?"Public":"Private");$("viewCode").textContent=s.code||"";
+ $("commentText").value="";$("comments").innerHTML='<p class="note">Loading conversation…</p>';modal("viewModal");
+ const [likes,ownLike]=await Promise.all([
+  db.from("script_likes").select("user_id").eq("script_id",id),
+  user?db.from("script_likes").select("script_id").eq("script_id",id).eq("user_id",user.id).maybeSingle():Promise.resolve({data:null,error:null})
+ ]);
+ if(likes.error)toast("Post likes: "+likes.error.message);
+ $("likeBtn").textContent=(ownLike.data?"♥ Liked":"♡ Like")+" · "+(likes.data||[]).length;
+ $("likeBtn").classList.toggle("is-liked",!!ownLike.data);
+ await shSocialRefresh(id);
+};
+async function shSendComment(textValue,parentId){
+ if(!user){toast("Sign in to comment or reply.");modal("authModal");return}
+ if(!selected?.id)return toast("Open a post first.");
+ const body=String(textValue||"").trim();
+ if(!body)return toast("Write a comment first.");
+ const result=await db.from("comments").insert({script_id:selected.id,user_id:user.id,body,parent_id:parentId||null});
+ if(result.error){toast("Comment couldn't be posted: "+result.error.message);return}
+ if(!parentId)$("commentText").value="";
+ toast(parentId?"Reply posted!":"Comment posted!");shSound("success");await shSocialRefresh(selected.id);
+}
+shPostComment=shSendComment;
+$("postComment").onclick=()=>shSendComment($("commentText").value,null);
+shToggleCommentLike=async function(id){
+ if(!user){toast("Sign in to like comments.");modal("authModal");return}
+ const check=await db.from("comment_likes").select("comment_id").eq("comment_id",id).eq("user_id",user.id).maybeSingle();
+ if(check.error){toast("Like unavailable: "+check.error.message);return}
+ const result=check.data?await db.from("comment_likes").delete().eq("comment_id",id).eq("user_id",user.id):await db.from("comment_likes").insert({comment_id:id,user_id:user.id});
+ if(result.error){toast("Could not update like: "+result.error.message);return}
+ shSound("like");await shSocialRefresh(selected.id);
+};
+/* Ensure likes on cards always refresh their red liked state and count. */
+$("scriptGrid").addEventListener("click",async e=>{
+ const b=e.target.closest("[data-post-like]");if(!b)return;
+ e.preventDefault();e.stopImmediatePropagation();
+ if(!user){toast("Sign in to like posts.");modal("authModal");return}
+ const id=b.dataset.postLike;
+ const check=await db.from("script_likes").select("script_id").eq("script_id",id).eq("user_id",user.id).maybeSingle();
+ if(check.error){toast(check.error.message);return}
+ const result=check.data?await db.from("script_likes").delete().eq("script_id",id).eq("user_id",user.id):await db.from("script_likes").insert({script_id:id,user_id:user.id});
+ if(result.error){toast(result.error.message);return}
+ shSound("like");await shLoad();
+},{capture:true});
+/* Refresh the All/Discover collection area after loading public scripts. */
+const shLoadBeforeSocial=shLoad;
+shLoad=async function(){await shLoadBeforeSocial();if(view==="discover")await shRenderPublicCollections()};
+
 /* ScriptHub v2.1: custom native-select replacements, public collections, reliable social UI */
 const shFinalStyle=document.createElement("style");
 shFinalStyle.textContent=`
