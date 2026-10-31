@@ -927,6 +927,189 @@ showScript=async function(id){
 };
 
 
+
+/* ScriptHub v2.1: custom native-select replacements, public collections, reliable social UI */
+const shFinalStyle=document.createElement("style");
+shFinalStyle.textContent=`
+/* Hide platform select widgets; keep hidden controls as the data source for saving. */
+.sh-native-hidden{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important;left:-9999px!important}
+.sh-select{position:relative;width:100%;min-width:0}
+.sh-select-trigger{width:100%;min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;background:#080d15;border:1px solid #273348;border-radius:10px;color:#eaf1fc;text-align:left}
+.sh-select-trigger:focus-visible,.sh-select-option:focus-visible{outline:2px solid #6b91d4;outline-offset:2px}
+.sh-select-menu{display:none;position:absolute;z-index:60;top:calc(100% + 6px);left:0;right:0;max-height:220px;overflow:auto;padding:5px;background:#101827;border:1px solid #334865;border-radius:12px;box-shadow:0 18px 45px #000d}
+.sh-select-menu.open{display:grid;gap:3px}
+.sh-select-option{display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px;border:0;border-radius:8px;background:transparent;color:#dbe6f8;text-align:left}
+.sh-select-option[aria-selected=true],.sh-select-option:hover{background:#1b2c47;color:#fff}
+.social-btn.is-liked{color:#ff536d!important;border-color:#853348!important;background:#32121f!important}
+.social-btn.is-liked:hover{background:#451727!important}
+.public-collections{margin:0 0 16px;padding:14px;background:#0a101a;border:1px solid #202b3b;border-radius:14px}
+.public-collections h3{margin:0 0 10px;font-size:13px}
+.public-collection{border:1px solid #26364d;border-radius:11px;background:#0d1623;margin:8px 0;overflow:hidden}
+.public-collection-head{width:100%;display:flex;align-items:center;gap:9px;padding:12px;background:transparent;border:0;color:#e5edfa;text-align:left}
+.public-collection-head strong{flex:1}
+.public-collection-body{display:none;padding:0 10px 10px}
+.public-collection.open .public-collection-body{display:block}
+.public-collection-script{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px;border-top:1px solid #202d40;color:#cbd8ec;font-size:12px}
+.public-collection-script button{flex:0 0 auto}
+.comment-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:#8f9eb4;font-size:11px}
+.comment-head strong{color:#dce7f8}
+.comment-body{color:#d0d9e8;font-size:13px;line-height:1.65;overflow-wrap:anywhere;margin:7px 0}
+.reply-list{margin:8px 0 0 12px;padding-left:12px;border-left:1px solid #2a3d59}
+.reply-form{display:flex;gap:7px;margin-top:9px}
+.reply-form input{flex:1;min-width:0;padding:10px;border:1px solid #293b55;border-radius:9px;background:#080e17;color:#eef4ff}
+#comments{max-height:48vh;overflow:auto;padding-right:3px}
+@media(max-width:600px){.sh-select-menu{max-height:190px}.reply-form{flex-wrap:wrap}.reply-form input{flex-basis:100%}}
+`;
+document.head.appendChild(shFinalStyle);
+function shMakeSelect(id,labels){
+ const select=$(id);if(!select||select.dataset.shCustom==="1")return;
+ select.dataset.shCustom="1";select.classList.add("sh-native-hidden");
+ const wrap=document.createElement("div");wrap.className="sh-select";
+ const trigger=document.createElement("button");trigger.type="button";trigger.className="sh-select-trigger";trigger.innerHTML='<span></span><span>⌄</span>';
+ const menu=document.createElement("div");menu.className="sh-select-menu";menu.setAttribute("role","listbox");
+ function draw(){
+  trigger.firstElementChild.textContent=labels[select.value]||select.options[select.selectedIndex]?.text||select.value;
+  menu.innerHTML=[...select.options].map(o=>'<button type="button" role="option" class="sh-select-option" data-value="'+esc(o.value)+'" aria-selected="'+(o.value===select.value)+'"><span>'+esc(labels[o.value]||o.text)+'</span><span>'+(o.value===select.value?"✓":"")+'</span></button>').join("");
+  menu.querySelectorAll("[data-value]").forEach(b=>b.onclick=()=>{select.value=b.dataset.value;select.dispatchEvent(new Event("change",{bubbles:true}));draw();menu.classList.remove("open");trigger.setAttribute("aria-expanded","false")});
+ }
+ trigger.setAttribute("aria-haspopup","listbox");trigger.setAttribute("aria-expanded","false");
+ trigger.onclick=()=>{const opened=menu.classList.toggle("open");trigger.setAttribute("aria-expanded",String(opened))};
+ document.addEventListener("click",e=>{if(!wrap.contains(e.target)){menu.classList.remove("open");trigger.setAttribute("aria-expanded","false")}});
+ wrap.append(trigger,menu);select.insertAdjacentElement("afterend",wrap);draw();
+ return {refresh:draw};
+}
+let shTypeSelect,shVisibilitySelect;
+function shInitCustomSelects(){
+ shTypeSelect=shMakeSelect("scriptType",{Script:"Script",LocalScript:"LocalScript",ModuleScript:"ModuleScript"});
+ shVisibilitySelect=shMakeSelect("scriptVisibility",{public:"Public",private:"Private"});
+}
+shInitCustomSelects();
+function shFolderPicker(selectedId){
+ const hidden=document.createElement("input");hidden.type="hidden";hidden.id="scriptFolderSelect";hidden.value=selectedId||"";
+ const wrap=document.createElement("div");wrap.className="field sh-select";
+ wrap.innerHTML='<label>Save in folder</label><button type="button" class="sh-select-trigger"><span></span><span>⌄</span></button><div class="sh-select-menu" role="listbox"></div><p class="note">Pick a folder now. You can open it later from My scripts.</p>';
+ wrap.insertBefore(hidden,wrap.firstChild);
+ const trigger=wrap.querySelector(".sh-select-trigger"),menu=wrap.querySelector(".sh-select-menu");
+ const options=[{id:"",name:"Unfiled"},...shFolders.map(f=>({id:f.id,name:f.name}))];
+ function draw(){
+  const current=options.find(x=>x.id===hidden.value)||options[0];
+  trigger.firstElementChild.textContent=(current.id?"📁 ":"🗂️ ")+current.name;
+  menu.innerHTML=options.map(o=>'<button type="button" class="sh-select-option" role="option" data-value="'+o.id+'" aria-selected="'+(o.id===hidden.value)+'"><span>'+(o.id?"📁 ":"🗂️ ")+esc(o.name)+'</span><span>'+(o.id===hidden.value?"✓":"")+'</span></button>').join("");
+  menu.querySelectorAll("[data-value]").forEach(b=>b.onclick=()=>{hidden.value=b.dataset.value;draw();menu.classList.remove("open");trigger.setAttribute("aria-expanded","false")});
+ }
+ trigger.setAttribute("aria-haspopup","listbox");trigger.setAttribute("aria-expanded","false");
+ trigger.onclick=()=>{const open=menu.classList.toggle("open");trigger.setAttribute("aria-expanded",String(open))};
+ document.addEventListener("click",e=>{if(!wrap.contains(e.target)){menu.classList.remove("open");trigger.setAttribute("aria-expanded","false")}});
+ draw();return wrap;
+}
+const shPriorOpenEditor=openEditor;
+openEditor=function(s){
+ shPriorOpenEditor(s);
+ $("scriptFolderSelect")?.closest(".field")?.remove();
+ const picker=shFolderPicker(s?.folder_id||shFolderFilter||"");
+ $("scriptVisibility").closest(".field").insertAdjacentElement("afterend",picker);
+};
+save=async function(){
+ if(!requireDb()||!user)return;
+ const folderId=$("scriptFolderSelect")?.value||null;
+ if(folderId&&!shFolders.some(f=>f.id===folderId&&f.owner_id===user.id)){toast("That folder is not yours.");return}
+ const payload={title:$("scriptTitle").value.trim(),description:$("scriptDescription").value.trim(),script_type:$("scriptType").value,visibility:$("scriptVisibility").value,code:editor?editor.getValue():$("codeInput").value,owner_id:user.id,folder_id:folderId};
+ if(!payload.title){toast("Add a script name first.");$("scriptTitle").focus();return}
+ const result=editingId?await db.from("scripts").update(payload).eq("id",editingId).eq("owner_id",user.id):await db.from("scripts").insert(payload);
+ if(result.error){toast("Save failed: "+result.error.message);return}
+ modal("editModal",false);toast(editingId?"Script updated!":"Script published!");shSound("success");
+ view="mine";shFolderFilter=folderId;
+ document.querySelectorAll(".navbtn").forEach(b=>b.classList.toggle("active",b.dataset.view==="mine"));
+ await shLoad();
+};
+async function shRenderPublicCollections(){
+ let host=$("publicCollections");
+ if(!host){host=document.createElement("section");host.id="publicCollections";host.className="public-collections";$("scriptGrid").before(host)}
+ if(view!=="discover"){host.remove();return}
+ const {data:folders,error}=await db.from("folders").select("id,name,description,owner_id").order("created_at",{ascending:false});
+ if(error){host.innerHTML='<h3>Public collections</h3><p class="note">Collections could not be loaded.</p>';return}
+ const publicRows=[];
+ for(const f of (folders||[])){
+  const {data:items,error:itemError}=await db.from("scripts").select("id,title,script_type,created_at").eq("folder_id",f.id).eq("visibility","public").order("created_at",{ascending:false});
+  if(!itemError&&items?.length)publicRows.push({folder:f,items});
+ }
+ if(!publicRows.length){host.remove();return}
+ host.innerHTML='<h3>📚 Public collections</h3>'+publicRows.map(({folder,items})=>'<section class="public-collection"><button type="button" class="public-collection-head"><span>📁</span><strong>'+esc(folder.name)+'</strong><span>'+items.length+' scripts</span><span>⌄</span></button><div class="public-collection-body">'+items.map(s=>'<div class="public-collection-script"><span>📄 '+esc(s.title)+' · '+esc(s.script_type)+'</span><button class="btn small primary" data-open-public="'+s.id+'">View</button></div>').join("")+'</div></section>').join("");
+ host.querySelectorAll(".public-collection-head").forEach(b=>b.onclick=()=>b.parentElement.classList.toggle("open"));
+ host.querySelectorAll("[data-open-public]").forEach(b=>b.onclick=()=>showScript(b.dataset.openPublic));
+}
+const shPriorLoad=load;
+load=async function(){await shLoad();await shRenderPublicCollections()};
+shLoad=async function(){
+ if(!requireDb())return;
+ shFolders=[];
+ if(user){
+  const fr=await db.from("folders").select("id,name,description,owner_id,created_at").eq("owner_id",user.id).order("created_at",{ascending:false});
+  if(fr.error){toast("Folders: "+fr.error.message);return}
+  shFolders=fr.data||[];
+ }
+ if(view==="mine"&&!user){scripts=[];$("scriptGrid").innerHTML='<div class="empty">Sign in to view your private library.</div>';shWorkspace();return}
+ let q=db.from("scripts").select("id,title,description,script_type,visibility,code,owner_id,created_at,folder_id").order("created_at",{ascending:false});
+ if(view==="mine")q=q.eq("owner_id",user.id);
+ else if(view==="liked"){
+  if(!user){scripts=[];$("scriptGrid").innerHTML='<div class="empty">Sign in to view liked scripts.</div>';return}
+  const {data:likes,error}=await db.from("script_likes").select("script_id").eq("user_id",user.id);
+  if(error){toast("Likes: "+error.message);return}
+  const ids=(likes||[]).map(x=>x.script_id);
+  if(!ids.length){scripts=[];await shRender();return}
+  q=q.in("id",ids).eq("visibility","public");
+ }else q=q.eq("visibility","public");
+ if(shFolderFilter&&view==="mine")q=q.eq("folder_id",shFolderFilter);
+ if(kind!=="All")q=q.eq("script_type",kind);
+ const {data,error}=await q;
+ if(error){toast("Could not load scripts: "+error.message);return}
+ scripts=data||[];await shRender();
+ if(view==="mine"){shWorkspace();await shRenderFolders()}else $("folderWorkspace")?.remove();
+};
+async function shShowScriptFixed(id){
+ let s=scripts.find(x=>x.id===id);
+ if(!s){const {data,error}=await db.from("scripts").select("id,title,description,script_type,visibility,code,owner_id,created_at,folder_id").eq("id",id).maybeSingle();if(error||!data){toast("This script is unavailable.");return}s=data}
+ selected=s;
+ $("viewTitle").textContent=s.title;$("viewDescription").textContent=s.description||"No description provided.";
+ $("viewMeta").textContent=s.script_type+" · "+(s.visibility==="public"?"Public":"Private");$("viewCode").textContent=s.code||"";
+ $("comments").innerHTML='<p class="note">Loading conversation…</p>';modal("viewModal");
+ $("commentText").value="";
+ const [cr,lr,pl]=await Promise.all([
+  db.from("comments").select("id,body,created_at,user_id,parent_id").eq("script_id",id).order("created_at"),
+  db.from("script_likes").select("user_id").eq("script_id",id),
+  user?db.from("script_likes").select("script_id").eq("script_id",id).eq("user_id",user.id).maybeSingle():Promise.resolve({data:null})
+ ]);
+ if(cr.error){$("comments").innerHTML='<p class="note">Comments unavailable: '+esc(cr.error.message)+'</p>';return}
+ const rows=cr.data||[],ids=rows.map(c=>c.id);
+ const lr2=ids.length?await db.from("comment_likes").select("comment_id,user_id").in("comment_id",ids):{data:[],error:null};
+ const likes=lr2.data||[];
+ $("comments").innerHTML=rows.length?shCommentTree(rows,likes):'<p class="note">No comments yet. Be the first to comment.</p>';
+ $("likeBtn").textContent=(pl.data?"♥ Liked":"♡ Like")+" · "+(lr.data||[]).length;
+ $("likeBtn").classList.toggle("is-liked",!!pl.data);
+ $("comments").querySelectorAll("[data-reply]").forEach(b=>b.onclick=()=>{
+  if(!user){toast("Sign in to reply.");modal("authModal");return}
+  const node=b.closest(".comment");let form=node.querySelector(".reply-form");
+  if(form){form.remove();return}
+  form=document.createElement("div");form.className="reply-form";
+  form.innerHTML='<input maxlength="500" placeholder="Write a reply…" aria-label="Write a reply"><button type="button" class="btn small primary">Reply</button>';
+  node.appendChild(form);
+  form.querySelector("button").onclick=()=>shPostComment(form.querySelector("input").value,b.dataset.reply);
+ });
+ $("comments").querySelectorAll("[data-comment-like]").forEach(b=>b.onclick=()=>shToggleCommentLike(b.dataset.commentLike));
+}
+showScript=shShowScriptFixed;
+$("postComment").onclick=()=>shPostComment($("commentText").value,null);
+like=async function(){
+ if(!user){toast("Sign in to like scripts.");modal("authModal");return}
+ if(!selected)return toast("Open a script first.");
+ const {data,error}=await db.from("script_likes").select("script_id").eq("script_id",selected.id).eq("user_id",user.id).maybeSingle();
+ if(error)return toast("Like check failed: "+error.message);
+ const result=data?await db.from("script_likes").delete().eq("script_id",selected.id).eq("user_id",user.id):await db.from("script_likes").insert({script_id:selected.id,user_id:user.id});
+ if(result.error)return toast("Like failed: "+result.error.message);
+ shSound("like");await shShowScriptFixed(selected.id);await shLoad();
+};
+$("likeBtn").onclick=like;
+
 </script>
 
 </body></html>
