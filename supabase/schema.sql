@@ -229,3 +229,34 @@ grant select on public.scripts, public.comments, public.folders,
   public.script_likes, public.comment_likes, public.folder_likes to anon;
 create index if not exists scripts_folder_idx on public.scripts(folder_id);
 create index if not exists comments_parent_idx on public.comments(parent_id, created_at);
+
+-- Enforce that a script can only be assigned to a folder owned by its creator.
+drop policy if exists "Users create own scripts" on public.scripts;
+create policy "Users create own scripts" on public.scripts
+for insert with check (
+  auth.uid() = owner_id
+  and (
+    folder_id is null
+    or exists (
+      select 1 from public.folders f
+      where f.id = folder_id and f.owner_id = auth.uid()
+    )
+  )
+);
+
+drop policy if exists "Users update own scripts" on public.scripts;
+create policy "Users update own scripts" on public.scripts
+for update using (auth.uid() = owner_id)
+with check (
+  auth.uid() = owner_id
+  and (
+    folder_id is null
+    or exists (
+      select 1 from public.folders f
+      where f.id = folder_id and f.owner_id = auth.uid()
+    )
+  )
+);
+
+create index if not exists scripts_owner_folder_created_idx
+on public.scripts(owner_id, folder_id, created_at desc);
