@@ -2099,4 +2099,84 @@ const sh50ProfileSave=$("sh4ProfileSave").onclick;
 $("sh4ProfileSave").onclick=async()=>{await sh50ProfileSave();await sh50SyncOwnProfile()};
 
 </script>
+<script>
+
+/* ScriptHub 5.1: darker, quieter professional UI + stronger button feedback. */
+const sh51Style=document.createElement("style");
+sh51Style.textContent=`
+:root{--bg:#05070b;--panel:#090d13;--panel2:#0d121a;--line:#1a222d;--text:#e5eaf1;--muted:#8792a2;--accent:#c0cad8}
+html,body{background:#05070b!important;color:#e5eaf1!important}
+body{background-image:none!important}
+header,.topbar,.navbar,.header,.nav{background:#06090e!important;border-color:#171e28!important;box-shadow:0 1px 0 #ffffff05!important}
+main,.main,.container{background:transparent!important}
+.card,.script,.folder-chip,.modalbox,.side,.panel,.workspace,.folder-workspace{background:#090e15!important;border:1px solid #1b2532!important;box-shadow:0 8px 24px #0004!important}
+.card:hover,.script:hover,.folder-chip:hover{background:#0c121b!important;border-color:#303d4e!important;box-shadow:0 12px 28px #0005!important;transform:translateY(-2px)}
+h1,h2,h3{color:#edf1f7!important;letter-spacing:-.035em!important}
+p,.note,.meta,.muted{color:#929eaf}
+button,.btn,.navbtn,.tab{box-shadow:none!important;border-radius:8px!important;transition:background .16s ease,border-color .16s ease,color .16s ease,transform .16s ease!important}
+.btn.primary,button.primary{background:#d2dbe7!important;color:#0b1119!important;border:1px solid #d2dbe7!important}
+.btn.primary:hover,button.primary:hover{background:#edf2f8!important}
+.btn:not(.primary),.social-btn,.navbtn,.tab{background:#0d141e!important;color:#c5cfdd!important;border:1px solid #263242!important}
+.btn:not(.primary):hover,.social-btn:hover,.navbtn:hover,.tab:hover{background:#151e2a!important;border-color:#3a485b!important}
+input,textarea,select{background:#070b11!important;color:#e7edf5!important;border-color:#202b39!important;box-shadow:none!important}
+input:focus,textarea:focus,select:focus{border-color:#72839a!important;box-shadow:0 0 0 3px #72839a16!important}
+.modal.show{background:#000e!important;backdrop-filter:blur(7px)!important}
+.modalbox{background:#090e15!important;border-color:#26303d!important;box-shadow:0 28px 80px #000b!important}
+#scriptGrid{gap:12px!important}
+#scriptGrid .card{padding:17px!important}
+#scriptGrid .card h3{font-size:18px!important;line-height:1.35}
+#scriptGrid .meta{display:flex;flex-wrap:wrap;gap:8px!important}
+.pill{background:#111a25!important;color:#b9c6d7!important;border:1px solid #253345!important}
+.creator-line{color:#aeb9c9!important}
+.creator-avatar,.creator-avatar-fallback{border-color:#2a3748!important}
+#viewModal .comment{background:#080c12!important;border-color:#1c2633!important}
+.sh51-svg{width:15px;height:15px;vertical-align:-3px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+@media(max-width:640px){#scriptGrid{grid-template-columns:1fr!important}.card,.script{border-radius:11px!important}.workspace-head{gap:10px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important}}
+`;
+document.head.appendChild(sh51Style);
+/* A fuller, louder sound with a short body and soft upper harmonic. */
+shSound=function(type="tap"){
+ if(!shSoundEnabled)return;
+ try{
+  const AudioCtx=window.AudioContext||window.webkitAudioContext;if(!AudioCtx)return;
+  if(!shSoundContext)shSoundContext=new AudioCtx();
+  if(shSoundContext.state==="suspended")shSoundContext.resume();
+  const ctx=shSoundContext,now=ctx.currentTime;
+  const freq=type==="success"?660:type==="like"?790:type==="open"?520:390;
+  const tone=(f,peak,duration,wave="sine",delay=0)=>{
+   const osc=ctx.createOscillator(),gain=ctx.createGain();
+   osc.type=wave;osc.frequency.setValueAtTime(f,now+delay);
+   gain.gain.setValueAtTime(.0001,now+delay);
+   gain.gain.exponentialRampToValueAtTime(peak,now+delay+.012);
+   gain.gain.exponentialRampToValueAtTime(.0001,now+delay+duration);
+   osc.connect(gain);gain.connect(ctx.destination);osc.start(now+delay);osc.stop(now+delay+duration+.015);
+  };
+  tone(freq,.085,.11,"sine");
+  tone(freq*1.5,.026,.075,"triangle",.008);
+ }catch(e){}
+};
+/* Swap the remaining emoji labels for compact inline vector icons. */
+function sh51ReplaceIconText(root){
+ const replacements=[["📁",'<svg class="sh51-svg" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>'],["🔒",'<svg class="sh51-svg" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>'],["🌐",'<svg class="sh51-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0-18"/></svg>']];
+ root.querySelectorAll(".meta span,.folder-name").forEach(el=>{let value=el.innerHTML;for(const [emoji,svg] of replacements)value=value.split(emoji).join(svg);el.innerHTML=value});
+}
+const sh51Render=shRender;
+shRender=async function(){await sh51Render();sh51ReplaceIconText($("scriptGrid"))};
+render=shRender;
+const sh51Folders=shRenderFolders;
+shRenderFolders=async function(){await sh51Folders();sh51ReplaceIconText($("folderList"))};
+/* Keep the signed-in creator's public profile record synced to their actual saved avatar URL. */
+const sh51Refresh=refreshUser;
+refreshUser=async function(){
+ await sh51Refresh();
+ if(user){
+  const m=user.user_metadata||{},name=m.display_name||m.username||user.email?.split("@")[0]||"Creator";
+  const r=await db.from("profiles").upsert({id:user.id,username:name,display_name:name,avatar_url:m.avatar_url||null},{onConflict:"id"});
+  if(r.error)console.warn("Profile sync:",r.error.message);
+ }
+ sh4RefreshProfile();
+};
+
+</script>
 </body></html>
