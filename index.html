@@ -2179,4 +2179,30 @@ refreshUser=async function(){
 };
 
 </script>
+<script>
+
+const sh52Style=document.createElement("style");
+sh52Style.textContent=`
+:root{color-scheme:dark;--bg:#030507;--panel:#080b10;--panel2:#0b1017;--line:#18212c;--text:#e8edf5;--muted:#7f8b9b}
+html,body{background:#030507!important;color:#e8edf5!important;background-image:none!important}
+header,.topbar,.navbar,.header,.nav{background:#05070a!important;border-color:#131a23!important;box-shadow:0 1px 0 #ffffff04!important}
+.card,.script,.folder-chip,.modalbox,.side,.panel,.workspace,.folder-workspace{background:#080c12!important;border:1px solid #18222f!important;box-shadow:0 7px 22px #0006!important}
+.card:hover,.script:hover,.folder-chip:hover{background:#0b1119!important;border-color:#2b3a4d!important;box-shadow:0 12px 30px #0008!important}
+#scriptGrid .card{border-radius:12px!important;padding:18px!important}#scriptGrid .card h3{font-size:17px!important;font-weight:650!important;letter-spacing:-.025em!important}
+h1,h2,h3{letter-spacing:-.035em!important;color:#edf2fa!important}p,.note,.meta,.muted{color:#8d99aa!important}
+button,.btn,.navbtn,.tab{border-radius:8px!important;box-shadow:none!important;transition:background .15s ease,border-color .15s ease,color .15s ease,transform .15s ease!important}
+.btn.primary,button.primary{background:#dbe4ef!important;color:#0a0f16!important;border:1px solid #dbe4ef!important;font-weight:650}.btn.primary:hover,button.primary:hover{background:#fff!important}
+.btn:not(.primary),.social-btn,.navbtn,.tab{background:#0b1119!important;color:#c3ccda!important;border:1px solid #202c3b!important}.btn:not(.primary):hover,.social-btn:hover,.navbtn:hover,.tab:hover{background:#141d29!important;border-color:#354459!important}
+input,textarea,select{background:#05080d!important;color:#e7edf5!important;border-color:#202a38!important;box-shadow:none!important}input:focus,textarea:focus,select:focus{border-color:#687d97!important;box-shadow:0 0 0 3px #7185a014!important}
+.modal.show{background:#000e!important;backdrop-filter:blur(10px)!important}.modalbox{background:#080c12!important;border-color:#253141!important;box-shadow:0 30px 90px #000d!important}
+.creator-line{color:#9caabd!important}.creator-line strong{color:#dfe7f2!important}.creator-avatar{border-color:#273447!important}.pill{background:#0c131c!important;color:#aab8ca!important;border-color:#202d3d!important}
+#folderList .folder-chip{padding:15px!important;border-radius:11px!important}
+.sh52-quick{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 16px}.sh52-quick button{display:inline-flex;align-items:center;gap:7px}.sh52-quick svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media(max-width:640px){#scriptGrid{grid-template-columns:1fr!important}#scriptGrid .card{padding:15px!important}.workspace-head{align-items:flex-start;flex-wrap:wrap}.workspace-tools{width:100%;display:flex;flex-wrap:wrap;gap:7px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important}}
+`;document.head.appendChild(sh52Style);
+shSound=function(type="tap"){if(!shSoundEnabled)return;try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;if(!shSoundContext)shSoundContext=new A();const c=shSoundContext;if(c.state==="suspended")c.resume();const n=c.currentTime,f=type==="success"?660:type==="like"?790:type==="open"?520:390,m=c.createGain(),cp=c.createDynamicsCompressor();m.gain.setValueAtTime(.9,n);cp.threshold.setValueAtTime(-8,n);cp.knee.setValueAtTime(8,n);cp.ratio.setValueAtTime(8,n);cp.attack.setValueAtTime(.003,n);cp.release.setValueAtTime(.12,n);m.connect(cp);cp.connect(c.destination);const tone=(hz,peak,dur,wave,delay=0)=>{const o=c.createOscillator(),g=c.createGain();o.type=wave;o.frequency.setValueAtTime(hz,n+delay);g.gain.setValueAtTime(.0001,n+delay);g.gain.exponentialRampToValueAtTime(peak,n+delay+.008);g.gain.exponentialRampToValueAtTime(.0001,n+delay+dur);o.connect(g);g.connect(m);o.start(n+delay);o.stop(n+delay+dur+.02)};tone(f,.32,.14,"sine");tone(f*1.5,.1,.1,"triangle",.008);tone(f*.5,.08,.08,"sine",.006);setTimeout(()=>{try{m.disconnect();cp.disconnect()}catch(e){}},300)}catch(e){}};
+(function(){const main=document.querySelector("main");if(!main||document.getElementById("sh52QuickActions"))return;const b=document.createElement("div");b.id="sh52QuickActions";b.className="sh52-quick";b.innerHTML='<button class="btn primary small" id="sh52Create"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Create script</button><button class="btn small" id="sh52Discover"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>Discover scripts</button><button class="btn small" id="sh52My"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>My workspace</button>';main.insertBefore(b,main.firstChild);document.getElementById("sh52Create").onclick=()=>{if(typeof openEditor==="function")openEditor();else document.getElementById("addFolderBtn")?.click()};document.getElementById("sh52Discover").onclick=()=>document.querySelector('.navbtn[data-view="discover"]')?.click();document.getElementById("sh52My").onclick=()=>document.querySelector('.navbtn[data-view="mine"]')?.click()})();
+
+</script>
 </body></html>
