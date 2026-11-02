@@ -2254,4 +2254,47 @@ document.head.appendChild(sh53);
 })();
 
 </script>
+
+<script>
+/* ScriptHub 5.4 — useful discovery tools, no redundant back-to-top control */
+(function(){
+ const old=document.getElementById("sh53Top");if(old){const wrap=old.closest("button");if(wrap)wrap.remove();}
+ const bar=document.getElementById("sh53Toolbar");if(!bar)return;
+ const actions=bar.querySelector(".sh53-actions");if(!actions)return;
+ if(!document.getElementById("sh54Random")){
+  const random=document.createElement("button");random.id="sh54Random";random.className="btn small";random.innerHTML='<svg viewBox="0 0 24 24"><path d="M4 7h3l10 10h3m-3-3 3 3-3 3M4 17h3l3-3m4-4 3-3h3m-3-3 3 3-3 3"/></svg>Surprise me';
+  actions.appendChild(random);
+  random.onclick=()=>{
+   const cards=[...document.querySelectorAll("#scriptGrid .card")].filter(x=>x.offsetParent!==null);
+   if(!cards.length){document.querySelector('.navbtn[data-view="discover"]')?.click();if(typeof toast==="function")toast("Open Discover to explore available scripts.");return}
+   const card=cards[Math.floor(Math.random()*cards.length)];
+   card.scrollIntoView({behavior:"smooth",block:"center"});card.classList.add("sh53-focus");
+   setTimeout(()=>card.classList.remove("sh53-focus"),1400);
+   const open=card.querySelector("button,[role=button],a");if(open)setTimeout(()=>open.click(),250);
+  };
+ }
+ if(!document.getElementById("sh54Challenge")){
+  const challenge=document.createElement("button");challenge.id="sh54Challenge";challenge.className="btn small";challenge.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 3 14.8 9.2 21 12l-6.2 2.8L12 21l-2.8-6.2L3 12l6.2-2.8L12 3Z"/></svg>Creator challenge';
+  actions.appendChild(challenge);
+  challenge.onclick=()=>{
+   if(document.getElementById("sh54ChallengeModal"))return;
+   const modal=document.createElement("div");modal.id="sh54ChallengeModal";
+   modal.style.cssText="position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:18px;background:#000d;backdrop-filter:blur(9px);opacity:0;transition:opacity .2s";
+   modal.innerHTML='<section style="width:min(440px,100%);background:#06090e;border:1px solid #263447;border-radius:15px;padding:22px;transform:translateY(8px);transition:transform .2s"><div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#91a5bf">Creator challenge</div><h2 style="font-size:22px;margin:8px 0">Build a useful mini-system</h2><p style="line-height:1.65">Create a reusable Roblox Lua module that formats large numbers (1200 → 1.2K, 1500000 → 1.5M). Handle decimals, negative values, and invalid input.</p><div style="padding:12px;background:#030609;border:1px solid #182434;border-radius:9px;font-size:13px;color:#aab8ca">Bonus: add a tiny example showing how another script would call the module.</div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px"><button class="btn small" id="sh54Close">Close</button><button class="btn primary small" id="sh54Start">Start creating</button></div></section>';
+   document.body.appendChild(modal);requestAnimationFrame(()=>{modal.style.opacity="1";modal.firstElementChild.style.transform="translateY(0)"});
+   const close=()=>{modal.style.opacity="0";modal.firstElementChild.style.transform="translateY(8px)";setTimeout(()=>modal.remove(),210)};
+   modal.querySelector("#sh54Close").onclick=close;modal.addEventListener("click",e=>{if(e.target===modal)close()});
+   modal.querySelector("#sh54Start").onclick=()=>{close();const create=document.getElementById("sh52Create");if(create)create.click();else if(typeof openEditor==="function")openEditor()};
+  };
+ }
+ let gPressed=false,gTimer;document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){document.getElementById("sh54ChallengeModal")?.remove();return}
+  if(/input|textarea|select/i.test(document.activeElement?.tagName||""))return;
+  if(e.key.toLowerCase()==="g"){gPressed=true;clearTimeout(gTimer);gTimer=setTimeout(()=>gPressed=false,900);return}
+  if(gPressed&&e.key.toLowerCase()==="t"){gPressed=false;window.scrollTo({top:0,behavior:"smooth"})}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();document.getElementById("sh53Search")?.click()}
+ });
+})();
+</script>
+
 </body></html>
