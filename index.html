@@ -2434,4 +2434,50 @@ document.head.appendChild(sh53);
 })();
 </script>
 
+
+<script>
+/* ScriptHub 5.7.1 — keep the CodeMirror snippet preview in sync when switching snippets */
+(function(){
+ const modalEl=document.getElementById("sh56VaultModal");if(!modalEl)return;
+ const list=modalEl.querySelector("#sh56List"),counter=modalEl.querySelector("#sh57LineCount");
+ function currentText(){const ta=modalEl.querySelector("textarea#sh56Code");return window.sh57Preview?window.sh57Preview.getValue():(ta?ta.value:"")}
+ function updatePreview(s){
+  const ta=modalEl.querySelector("textarea#sh56Code");
+  if(window.sh57Preview){window.sh57Preview.setValue(s.code);window.sh57Preview.refresh()}
+  else if(ta)ta.value=s.code;
+  const n=s.code.split("\n").length;if(counter)counter.textContent=n+" lines";
+  modalEl.querySelector("#sh56Name").textContent=s.name;modalEl.querySelector("#sh56Desc").textContent=s.desc;modalEl.querySelector("#sh56Cat").textContent=s.cat;
+  list?.querySelectorAll("[data-snippet]").forEach(b=>{const on=b.textContent.includes(s.name);b.style.borderColor=on?"#637b9b":"#1b2736";b.style.background=on?"#111b29":"#080d14"});
+  window.sh57ActiveSnippet=s;
+ }
+ /* Find the embedded deck from the existing vault closure via its visible list buttons. */
+ list?.addEventListener("click",e=>{
+  const b=e.target.closest("[data-snippet]");if(!b)return;
+  const index=Number(b.dataset.snippet);
+  const known=window.sh57Deck?.[index];
+  if(known)updatePreview(known);
+ },true);
+ /* Expose a stable selection bridge by reading snippets from the original closure on first selection. */
+ const oldSelect=window.sh56Select;
+ const patchActive=()=>{
+  const ta=modalEl.querySelector("textarea#sh56Code");
+  if(ta&&window.CodeMirror&&!window.sh57Preview){
+   window.sh57Preview=CodeMirror.fromTextArea(ta,{mode:"lua",theme:"material-darker",lineNumbers:true,readOnly:true,viewportMargin:Infinity});
+   window.sh57Preview.setSize("100%","auto");window.sh57Preview.getWrapperElement().style.maxHeight="43dvh";
+  }
+ };
+ patchActive();
+ const insert=modalEl.querySelector("#sh56Insert");if(insert){
+  insert.onclick=()=>{
+   const value=currentText();if(!value.trim()){toast("Choose a snippet first.");return}
+   if(!user){toast("Sign in to open the script editor.");modal("authModal");return}
+   if($("editModal")?.classList.contains("show")&&editor){editor.replaceSelection(value);editor.focus()}
+   else{openEditor();setTimeout(()=>{if(editor){editor.setValue(value);editor.focus();editor.setCursor(editor.lineCount(),0)}else $("codeInput").value=value},100)}
+   modalEl.style.opacity="0";setTimeout(()=>{modalEl.style.display="none"},210);toast("Snippet inserted into the script editor.");
+  };
+ }
+ const copy=modalEl.querySelector("#sh56Copy");if(copy)copy.onclick=async()=>{const value=currentText();try{await navigator.clipboard.writeText(value);toast("Snippet copied to clipboard.")}catch(e){toast("Clipboard access is unavailable.")}};
+})();
+</script>
+
 </body></html>
