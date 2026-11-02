@@ -2631,4 +2631,62 @@ document.head.appendChild(sh53);
 })();
 </script>
 
+
+<script>
+/* ScriptHub 6.0 — fix mobile width and make snippet rendering independent of CDN timing */
+(function(){
+ const css=document.createElement('style');
+ css.textContent=`
+ @media(max-width:760px){
+  .wrap{width:100%!important;max-width:100%!important;padding-left:14px!important;padding-right:14px!important}
+  .layout{width:100%!important;max-width:100%!important;grid-template-columns:minmax(0,1fr)!important}
+  .layout>main,main{width:100%!important;max-width:100%!important;min-width:0!important;margin-left:0!important;margin-right:0!important}
+  #scriptGrid,.grid{width:100%!important;max-width:100%!important;grid-template-columns:minmax(0,1fr)!important}
+  .mainhead,.tabs,#search{max-width:100%!important;min-width:0!important}
+ }
+ #sh56VaultModal .sh57-code-wrap{width:100%;min-width:0}
+ #sh56VaultModal textarea#sh56Code{display:block;width:100%;height:260px;min-height:170px;max-height:42dvh;resize:vertical;box-sizing:border-box;background:#020508;color:#dce8fa;border:0;border-radius:0;padding:14px;font:12px/1.65 ui-monospace,Consolas,monospace;white-space:pre;overflow:auto}
+ #sh56VaultModal .CodeMirror{display:block;width:100%;height:260px!important;min-height:170px;max-height:42dvh;background:#020508;font:12px/1.65 ui-monospace,Consolas,monospace}
+ #sh56VaultModal .CodeMirror-scroll{min-height:170px;max-height:42dvh}
+ @media(max-width:700px){#sh56VaultModal textarea#sh56Code,#sh56VaultModal .CodeMirror{height:220px!important;max-height:30dvh;min-height:150px}#sh56VaultModal .CodeMirror-scroll{max-height:30dvh;min-height:150px}}
+ `;
+ document.head.appendChild(css);
+ const modal=document.getElementById('sh56VaultModal');if(!modal)return;
+ const getCode=()=>window.sh57Preview?.getValue?.()??modal.querySelector('textarea#sh56Code')?.value??window.sh58ActiveSnippet?.code??'';
+ function showCode(value){
+  const ta=modal.querySelector('textarea#sh56Code');
+  if(window.sh57Preview&&typeof window.sh57Preview.setValue==='function'){
+   window.sh57Preview.setValue(value);window.sh57Preview.refresh();
+   const wrapper=window.sh57Preview.getWrapperElement();wrapper.style.display='block';wrapper.style.width='100%';
+  }else if(ta){ta.value=value;ta.textContent=value;ta.style.setProperty('display','block','important')}
+  const count=value.split('\n').length,counter=modal.querySelector('#sh57LineCount');if(counter)counter.textContent=count+' lines';
+ }
+ function selectSnippet(index){
+  const s=Array.isArray(window.sh57Deck)?window.sh57Deck[index]:null;if(!s)return;
+  window.sh58ActiveSnippet=s;
+  modal.querySelector('#sh56Name').textContent=s.name;
+  modal.querySelector('#sh56Desc').textContent=s.desc;
+  modal.querySelector('#sh56Cat').textContent=s.cat;
+  showCode(s.code);
+  modal.querySelectorAll('[data-snippet]').forEach(b=>{const active=Number(b.dataset.snippet)===index;b.style.borderColor=active?'#8aa9d1':'#263447';b.style.background=active?'#142033':'#080d14'});
+ }
+ modal.querySelector('#sh56List')?.addEventListener('click',e=>{const b=e.target.closest('[data-snippet]');if(b)setTimeout(()=>selectSnippet(Number(b.dataset.snippet)),0)});
+ // Reapply the selected snippet whenever the vault opens, avoiding stale detached <pre> content.
+ const opener=document.getElementById('sh56Snippets');
+ opener?.addEventListener('click',()=>setTimeout(()=>{const i=window.sh57Deck?.findIndex(s=>s.name===modal.querySelector('#sh56Name')?.textContent)??0;selectSnippet(i>=0?i:0);if(window.sh57Preview)window.sh57Preview.refresh()},80));
+ const copy=modal.querySelector('#sh56Copy');
+ if(copy)copy.onclick=async()=>{const value=getCode();try{await navigator.clipboard.writeText(value);if(typeof toast==='function')toast('Snippet copied to clipboard.')}catch(_){const ta=modal.querySelector('textarea#sh56Code');if(ta){ta.value=value;ta.style.display='block';ta.focus();ta.select();document.execCommand('copy');if(typeof toast==='function')toast('Snippet copied to clipboard.')}}};
+ const insert=modal.querySelector('#sh56Insert');
+ if(insert)insert.onclick=()=>{
+  const value=getCode();if(!value.trim()){if(typeof toast==='function')toast('Choose a snippet first.');return}
+  if(!window.user){if(typeof toast==='function')toast('Sign in before opening the editor.');return}
+  if(document.getElementById('editModal')?.classList.contains('show')&&window.editor){window.editor.replaceSelection(value);window.editor.focus()}
+  else if(typeof window.openEditor==='function'){window.openEditor();setTimeout(()=>{if(window.editor){window.editor.setValue(value);window.editor.focus();window.editor.setCursor(window.editor.lineCount(),0)}else{const input=document.getElementById('codeInput');if(input)input.value=value}},150)}
+  modal.style.opacity='0';setTimeout(()=>modal.style.display='none',210);
+ };
+ // Always render the first snippet as visible source on load, including if CodeMirror fails to load.
+ setTimeout(()=>{if(!window.sh57Preview){const first=window.sh57Deck?.[0];if(first)selectSnippet(0);const ta=modal.querySelector('textarea#sh56Code');if(ta)ta.style.setProperty('display','block','important')}},0);
+})();
+</script>
+
 </body></html>
