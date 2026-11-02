@@ -2390,94 +2390,21 @@ document.head.appendChild(sh53);
 
 
 <script>
-/* ScriptHub 5.7 — repair snippet insertion, editing, syntax highlighting and line counts */
+/* ScriptHub 5.7 — single-instance snippet preview */
 (function(){
- const style=document.createElement("style");style.textContent=`
- .sh57-code-wrap{border:1px solid #1a2738;border-radius:10px;overflow:hidden;background:#020508;min-width:0}
- .sh57-code-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;background:#080e17;border-bottom:1px solid #182434;font-size:11px;color:#9aabc2}
- .sh57-code-head strong{font-weight:600;color:#d3dfef}.sh57-code-head span{font-variant-numeric:tabular-nums}
- #sh56Code{display:none!important}.sh57-code-wrap .CodeMirror{height:auto;max-height:43dvh;min-height:160px;background:#020508;font:12px/1.6 ui-monospace,monospace}
- #sh56List button{width:100%;text-align:left;display:flex;align-items:center;gap:8px}
- #sh56List button:focus-visible,#sh56Snippets:focus-visible{outline:2px solid #8aa9d1;outline-offset:2px}
- @media(max-width:620px){#sh56VaultModal section>div:nth-child(2){grid-template-columns:1fr!important}#sh56List{grid-template-columns:repeat(2,minmax(0,1fr))!important}#sh56List button{font-size:11px!important;padding:8px!important}#sh56Code{max-height:36dvh}}
- `;document.head.appendChild(style);
- const modal=document.getElementById("sh56VaultModal");if(!modal)return;
- const codeArea=modal.querySelector("#sh56Code");let preview=null;
- const head=document.createElement("div");head.className="sh57-code-head";head.innerHTML='<strong>Lua source</strong><span id="sh57LineCount">0 lines</span>';
- const wrap=document.createElement("div");wrap.className="sh57-code-wrap";head.nextElementSibling;
- const existing=codeArea.parentNode;existing.insertBefore(wrap,codeArea);wrap.appendChild(head);wrap.appendChild(codeArea);
- const originalSelect=modal.querySelector("#sh56Name");
- function enhancePreview(){const code=codeArea.textContent||"";modal.querySelector("#sh57LineCount").textContent=code.split("\n").length+" lines";if(window.CodeMirror){if(preview){preview.toTextArea();preview=null}const ta=document.createElement("textarea");ta.value=code;codeArea.replaceWith(ta);ta.id="sh56Code";ta.style.display="";preview=CodeMirror.fromTextArea(ta,{mode:"lua",theme:"material-darker",lineNumbers:true,readOnly:true,viewportMargin:Infinity,lineWrapping:false});preview.setSize("100%","auto");preview.getWrapperElement().style.maxHeight="43dvh";preview.getWrapperElement().style.height="auto";preview.refresh()}else{codeArea.style.display="block";codeArea.style.whiteSpace="pre";codeArea.style.margin=0;codeArea.style.border=0;codeArea.style.maxHeight="43dvh";codeArea.style.minHeight="160px";codeArea.style.font="12px/1.6 ui-monospace,monospace"}}
- const list=modal.querySelector("#sh56List");if(list){const observer=new MutationObserver(()=>{list.querySelectorAll("button").forEach(b=>{if(!b.dataset.sh57){b.dataset.sh57="1";const raw=b.textContent.trim();b.title=raw;b.style.minHeight="42px"}})});observer.observe(list,{childList:true,subtree:true})}
- const origRender=window.sh56RenderList;
- const observer=new MutationObserver(()=>enhancePreview());observer.observe(codeArea,{childList:true,characterData:true,subtree:true});
- const getActiveCode=()=>preview?preview.getValue():(modal.querySelector("#sh56Code")?.textContent||"");
- const copy=modal.querySelector("#sh56Copy");if(copy)copy.onclick=async()=>{const value=getActiveCode();try{await navigator.clipboard.writeText(value);toast("Snippet copied to clipboard.")}catch(e){const ta=document.createElement("textarea");ta.value=value;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");toast("Snippet copied to clipboard.")}catch(_){toast("Copy unavailable in this browser.")}ta.remove()}};
- const insert=modal.querySelector("#sh56Insert");if(insert)insert.onclick=()=>{
-  const value=getActiveCode();
-  if(!user){toast("Sign in to open the script editor.");modal("authModal");return}
-  const finish=()=>{
-   if(!editor){openEditor();setTimeout(()=>{if(editor){editor.setValue(value);editor.focus();editor.setCursor(editor.lineCount(),0)}else{$("codeInput").value=value}},80)}
-   else if($("editModal")?.classList.contains("show")){editor.replaceSelection(value);editor.focus()}
-   else{openEditor();setTimeout(()=>{if(editor){editor.setValue(value);editor.focus();editor.setCursor(editor.lineCount(),0)}},80)}
-   const vault=document.getElementById("sh56VaultModal");if(vault){vault.style.opacity="0";setTimeout(()=>{vault.style.display="none"},210)}
-   toast("Snippet loaded into the script editor. Give it a title before saving.");
-  };
-  finish();
- };
- /* Delegate card Edit/View actions so dynamically rendered cards always respond. */
- document.addEventListener("click",async e=>{
-  const edit=e.target.closest("[data-edit]");if(edit){e.preventDefault();e.stopImmediatePropagation();const id=edit.getAttribute("data-edit");let s=scripts.find(x=>String(x.id)===String(id));if(!s&&db){const r=await db.from("scripts").select("*").eq("id",id).eq("owner_id",user?.id).maybeSingle();s=r.data}if(!user){toast("Sign in to edit scripts.");modal("authModal");return}if(!s||s.owner_id!==user.id){toast("You can only edit your own scripts.");return}openEditor(s);return}
- },true);
- /* Rebuild highlighted preview after each selection. */
- const oldSelect=modal.querySelector("#sh56Code");if(oldSelect){const check=setInterval(()=>{if(!document.body.contains(modal)){clearInterval(check);return}const code=preview?preview.getValue():(modal.querySelector("#sh56Code")?.textContent||"");const counter=modal.querySelector("#sh57LineCount");if(counter&&counter.textContent!==(code.split("\n").length+" lines"))counter.textContent=code.split("\n").length+" lines"},500)}
- const initial=codeArea.textContent||"";enhancePreview();
-})();
-</script>
-
-
-<script>
-/* ScriptHub 5.7.1 — keep the CodeMirror snippet preview in sync when switching snippets */
-(function(){
- const modalEl=document.getElementById("sh56VaultModal");if(!modalEl)return;
- const list=modalEl.querySelector("#sh56List"),counter=modalEl.querySelector("#sh57LineCount");
- function currentText(){const ta=modalEl.querySelector("textarea#sh56Code");return window.sh57Preview?window.sh57Preview.getValue():(ta?ta.value:"")}
- function updatePreview(s){
-  const ta=modalEl.querySelector("textarea#sh56Code");
-  if(window.sh57Preview){window.sh57Preview.setValue(s.code);window.sh57Preview.refresh()}
-  else if(ta)ta.value=s.code;
-  const n=s.code.split("\n").length;if(counter)counter.textContent=n+" lines";
-  modalEl.querySelector("#sh56Name").textContent=s.name;modalEl.querySelector("#sh56Desc").textContent=s.desc;modalEl.querySelector("#sh56Cat").textContent=s.cat;
-  list?.querySelectorAll("[data-snippet]").forEach(b=>{const on=b.textContent.includes(s.name);b.style.borderColor=on?"#637b9b":"#1b2736";b.style.background=on?"#111b29":"#080d14"});
-  window.sh57ActiveSnippet=s;
- }
- /* Find the embedded deck from the existing vault closure via its visible list buttons. */
- list?.addEventListener("click",e=>{
-  const b=e.target.closest("[data-snippet]");if(!b)return;
-  const index=Number(b.dataset.snippet);
-  const known=window.sh57Deck?.[index];
-  if(known)updatePreview(known);
- },true);
- /* Expose a stable selection bridge by reading snippets from the original closure on first selection. */
- const oldSelect=window.sh56Select;
- const patchActive=()=>{
-  const ta=modalEl.querySelector("textarea#sh56Code");
-  if(ta&&window.CodeMirror&&!window.sh57Preview){
-   window.sh57Preview=CodeMirror.fromTextArea(ta,{mode:"lua",theme:"material-darker",lineNumbers:true,readOnly:true,viewportMargin:Infinity});
-   window.sh57Preview.setSize("100%","auto");window.sh57Preview.getWrapperElement().style.maxHeight="43dvh";
-  }
- };
- patchActive();
- const insert=modalEl.querySelector("#sh56Insert");if(insert){
-  insert.onclick=()=>{
-   const value=currentText();if(!value.trim()){toast("Choose a snippet first.");return}
-   if(!user){toast("Sign in to open the script editor.");modal("authModal");return}
-   if($("editModal")?.classList.contains("show")&&editor){editor.replaceSelection(value);editor.focus()}
-   else{openEditor();setTimeout(()=>{if(editor){editor.setValue(value);editor.focus();editor.setCursor(editor.lineCount(),0)}else $("codeInput").value=value},100)}
-   modalEl.style.opacity="0";setTimeout(()=>{modalEl.style.display="none"},210);toast("Snippet inserted into the script editor.");
-  };
- }
- const copy=modalEl.querySelector("#sh56Copy");if(copy)copy.onclick=async()=>{const value=currentText();try{await navigator.clipboard.writeText(value);toast("Snippet copied to clipboard.")}catch(e){toast("Clipboard access is unavailable.")}};
+ const modal=document.getElementById('sh56VaultModal');if(!modal)return;
+ const pre=modal.querySelector('#sh56Code');if(!pre)return;
+ const style=document.createElement('style');style.textContent='#sh56VaultModal #sh56Code{display:none!important}#sh56VaultModal .sh57-code-wrap{min-width:0;border:1px solid #1a2738;border-radius:10px;overflow:hidden;background:#020508}#sh56VaultModal .sh57-code-head{display:flex;justify-content:space-between;padding:9px 12px;background:#080e17;border-bottom:1px solid #182434;color:#9aabc2;font-size:11px}#sh56VaultModal .CodeMirror{height:auto!important;min-height:190px;max-height:44dvh;background:#020508;font:12px/1.6 ui-monospace,monospace}#sh56VaultModal .CodeMirror-scroll{min-height:190px;max-height:44dvh}';document.head.appendChild(style);
+ const wrap=document.createElement('div');wrap.className='sh57-code-wrap';
+ const head=document.createElement('div');head.className='sh57-code-head';head.innerHTML='<strong>Lua source</strong><span id="sh57LineCount">0 lines</span>';
+ pre.parentNode.insertBefore(wrap,pre);wrap.append(head,pre);
+ const ta=document.createElement('textarea');ta.id='sh56Code';ta.value=pre.textContent||'';pre.replaceWith(ta);ta.style.display='none';
+ if(window.CodeMirror){window.sh57Preview=window.CodeMirror.fromTextArea(ta,{mode:'lua',theme:'material-darker',lineNumbers:true,readOnly:true,viewportMargin:Infinity,lineWrapping:false});window.sh57Preview.setSize('100%','auto');}
+ const updateCount=code=>{const n=code.split('\n').length;const counter=modal.querySelector('#sh57LineCount');if(counter)counter.textContent=n+' lines'};
+ updateCount(ta.value);
+ const list=modal.querySelector('#sh56List');
+ list?.querySelectorAll('button').forEach(b=>{b.style.minHeight='42px';b.style.width='100%'});
+ window.sh57SetCode=code=>{if(window.sh57Preview){window.sh57Preview.setValue(code);window.sh57Preview.refresh()}else ta.value=code;updateCount(code)};
 })();
 </script>
 
