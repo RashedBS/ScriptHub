@@ -2372,6 +2372,7 @@ document.head.appendChild(sh53);
   {name:"Cleanup Connections",cat:"Performance",desc:"Keep event connections organized for cleanup.",code:'local connections = {}\n\nlocal function connect(signal, callback)\n    local connection = signal:Connect(callback)\n    table.insert(connections, connection)\n    return connection\nend\n\nlocal function cleanup()\n    for _, connection in ipairs(connections) do\n        connection:Disconnect()\n    end\n    table.clear(connections)\nend\n\n-- Call cleanup() when this system is removed.'},
   {name:"Distance Check",cat:"Gameplay",desc:"Check distance between two BaseParts.",code:'local function isInRange(partA, partB, maxDistance)\n    if not partA or not partB then return false end\n    if not partA:IsA("BasePart") or not partB:IsA("BasePart") then return false end\n    return (partA.Position - partB.Position).Magnitude <= maxDistance\nend'}
  ];
+ window.sh57Deck = snippets;
  const modal=document.createElement("div");modal.id="sh56VaultModal";modal.style.cssText="position:fixed;inset:0;z-index:10001;display:none;place-items:center;padding:14px;background:#000d;backdrop-filter:blur(10px);opacity:0;transition:opacity .2s";
  modal.innerHTML='<section style="width:min(760px,100%);max-height:90dvh;overflow:hidden;background:#06090e;border:1px solid #263447;border-radius:15px;display:flex;flex-direction:column;transform:translateY(8px);transition:transform .2s"><div style="padding:18px;border-bottom:1px solid #192535;display:flex;align-items:center;justify-content:space-between;gap:10px"><div><div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#91a5bf">ScriptHub tools</div><h2 style="font-size:21px;margin:5px 0 0">Lua snippet vault</h2></div><button class="btn small" id="sh56Close">Close</button></div><div style="padding:14px;display:grid;grid-template-columns:minmax(150px,.8fr) minmax(0,1.5fr);gap:14px;min-height:0;overflow:auto"><div><input id="sh56Filter" placeholder="Search snippets..." style="width:100%;padding:10px;border:1px solid #1a2533;border-radius:8px;margin-bottom:10px"><div id="sh56List" style="display:grid;gap:6px"></div></div><div style="min-width:0"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><div><strong id="sh56Name">Choose a snippet</strong><div id="sh56Desc" style="font-size:12px;color:#8292a8;margin-top:4px"></div></div><span id="sh56Cat" style="font-size:11px;color:#9db1cc"></span></div><pre id="sh56Code" style="white-space:pre;overflow:auto;max-height:43dvh;background:#020508;border:1px solid #182434;border-radius:9px;padding:13px;font:12px/1.6 ui-monospace,monospace;color:#d1def0"></pre><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn small" id="sh56Copy">Copy code</button><button class="btn primary small" id="sh56Insert">Insert into open editor</button></div><div style="font-size:11px;color:#718198;margin-top:8px">Review and test snippets before using them in your game.</div></div></div></section>';
  document.body.appendChild(modal);let active=snippets[0];
@@ -2477,6 +2478,158 @@ document.head.appendChild(sh53);
   };
  }
  const copy=modalEl.querySelector("#sh56Copy");if(copy)copy.onclick=async()=>{const value=currentText();try{await navigator.clipboard.writeText(value);toast("Snippet copied to clipboard.")}catch(e){toast("Clipboard access is unavailable.")}};
+})();
+</script>
+
+
+<script>
+/* ScriptHub 5.8 — stable snippet sync, creator dashboard, version snapshots, discovery and challenge progress */
+(function(){
+ const $=s=>document.querySelector(s), $=s=>Array.from(document.querySelectorAll(s));
+ const css=document.createElement('style');
+ css.textContent=`
+ /* Responsive workspace polish */
+ body{overflow-x:hidden}
+ main{width:min(1440px,calc(100% - 48px));margin-inline:auto}
+ .mainhead{gap:16px;align-items:center;flex-wrap:wrap}
+ .tabs{display:flex;gap:7px;flex-wrap:wrap}
+ #search{width:100%;max-width:none;min-height:48px;margin:14px 0 20px}
+ #scriptGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,310px),1fr));gap:18px;align-items:stretch}
+ #scriptGrid>.card{min-width:0;height:100%;display:flex;flex-direction:column}
+ #scriptGrid .card p,#scriptGrid .card .description{overflow-wrap:anywhere}
+ #sh56VaultModal{padding:clamp(10px,3vw,28px)!important}
+ #sh56VaultModal>section{width:min(1120px,100%)!important;max-height:min(88dvh,900px)!important}
+ #sh56VaultModal>section>div:nth-child(2){grid-template-columns:minmax(220px,.72fr) minmax(0,1.6fr)!important;padding:clamp(14px,2vw,24px)!important;gap:clamp(14px,2vw,24px)!important}
+ #sh56VaultModal #sh56Code{display:none!important}
+ #sh56VaultModal .sh57-code-wrap{min-width:0}
+ #sh56VaultModal .CodeMirror{width:100%;min-height:210px;max-height:44dvh;height:auto!important;box-sizing:border-box}
+ #sh56VaultModal .CodeMirror-scroll{min-height:210px;max-height:44dvh}
+ .sh58-tools{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+ .sh58-tools button{display:inline-flex;align-items:center;gap:8px}
+ .sh58-panel{width:min(900px,100%);max-height:88dvh;overflow:auto;background:#070b12;border:1px solid #263447;border-radius:16px;padding:clamp(18px,3vw,30px);color:#dce6f5;box-shadow:0 24px 90px #0009}
+ .sh58-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}
+ .sh58-metric{padding:16px;border:1px solid #202e40;border-radius:12px;background:#0a111c;min-width:0}
+ .sh58-metric strong{display:block;font-size:clamp(21px,3vw,30px);font-variant-numeric:tabular-nums}
+ .sh58-metric span{font-size:12px;color:#91a3ba}
+ .sh58-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+ .sh58-row input,.sh58-row select{background:#080e17;color:#dce6f5;border:1px solid #29394e;border-radius:9px;padding:10px;min-height:42px}
+ .sh58-history-item{padding:12px 0;border-bottom:1px solid #1d2939;display:flex;justify-content:space-between;gap:12px;align-items:center}
+ .sh58-history-item small{color:#91a3ba}
+ @media(min-width:1200px){main{padding-top:24px}#scriptGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+ @media(max-width:700px){main{width:calc(100% - 24px)}.sh58-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}#sh56VaultModal>section>div:nth-child(2){grid-template-columns:1fr!important}#sh56VaultModal #sh56List{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+ `;
+ document.head.appendChild(css);
+ const getDeck=()=>Array.isArray(window.sh57Deck)?window.sh57Deck:[];
+ function syncSnippet(index){
+  const s=getDeck()[index];if(!s)return;
+  const modal=$('#sh56VaultModal');if(!modal)return;
+  modal.querySelector('#sh56Name').textContent=s.name;
+  modal.querySelector('#sh56Desc').textContent=s.desc;
+  modal.querySelector('#sh56Cat').textContent=s.cat;
+  const ta=modal.querySelector('textarea#sh56Code');
+  if(ta&&ta.CodeMirror){ta.CodeMirror.setValue(s.code);ta.CodeMirror.refresh()}
+  else {const cm=modal.querySelector('.CodeMirror');if(cm&&window.CodeMirror){const input=modal.querySelector('textarea#sh56Code');if(input&&input.CodeMirror)input.CodeMirror.setValue(s.code)}}
+  const n=s.code.split('\n').length,counter=modal.querySelector('#sh57LineCount');if(counter)counter.textContent=n+' lines';
+  modal.querySelectorAll('[data-snippet]').forEach(b=>{const active=Number(b.dataset.snippet)===index;b.style.borderColor=active?'#8aa9d1':'#263447';b.style.background=active?'#142033':'#080d14'});
+  window.sh58ActiveSnippet=s;
+ }
+ document.addEventListener('click',e=>{const b=e.target.closest('#sh56List [data-snippet]');if(b)setTimeout(()=>syncSnippet(Number(b.dataset.snippet)),0)},true);
+ // Keep preview content and line count tied to the actual selected snippet.
+ const vault=$('#sh56VaultModal');
+ if(vault){
+  const copy=vault.querySelector('#sh56Copy');
+  if(copy)copy.onclick=async()=>{
+   const ta=vault.querySelector('textarea#sh56Code'),value=ta?.CodeMirror?ta.CodeMirror.getValue():(window.sh58ActiveSnippet?.code||'');
+   try{await navigator.clipboard.writeText(value);if(typeof toast==='function')toast('Snippet copied to clipboard.')}
+   catch(_){const tmp=document.createElement('textarea');tmp.value=value;document.body.appendChild(tmp);tmp.select();document.execCommand('copy');tmp.remove();if(typeof toast==='function')toast('Snippet copied to clipboard.')}
+  };
+  const insert=vault.querySelector('#sh56Insert');
+  if(insert)insert.onclick=()=>{
+   const ta=vault.querySelector('textarea#sh56Code'),value=ta?.CodeMirror?ta.CodeMirror.getValue():(window.sh58ActiveSnippet?.code||'');
+   if(!value.trim()){if(typeof toast==='function')toast('Choose a snippet first.');return}
+   if(!window.user){if(typeof toast==='function')toast('Sign in before opening the editor.');return}
+   if($('#editModal')?.classList.contains('show')&&window.editor){window.editor.replaceSelection(value);window.editor.focus()}
+   else {if(typeof window.openEditor==='function')window.openEditor();setTimeout(()=>{if(window.editor){window.editor.setValue(value);window.editor.focus();window.editor.setCursor(window.editor.lineCount(),0)}else if($('#codeInput'))$('#codeInput').value=value},120)}
+   vault.style.opacity='0';setTimeout(()=>vault.style.display='none',210);
+  };
+ }
+ // Creator analytics are calculated from the signed-in user's loaded script records.
+ function openPanel(id,title,content){
+  let m=document.getElementById(id);if(m)m.remove();
+  m=document.createElement('div');m.id=id;m.style.cssText='position:fixed;inset:0;z-index:10050;display:grid;place-items:center;padding:16px;background:#000c;backdrop-filter:blur(10px)';
+  m.innerHTML='<section class="sh58-panel"><div class="sh58-row" style="justify-content:space-between"><div><div style="font-size:10px;letter-spacing:.14em;color:#91a5bf;text-transform:uppercase">SCRIPTHUB WORKSPACE</div><h2 style="margin:6px 0 0;font-size:25px">'+title+'</h2></div><button class="btn small" data-sh58-close>Close</button></div>'+content+'</section>';
+  document.body.appendChild(m);m.addEventListener('click',e=>{if(e.target===m||e.target.closest('[data-sh58-close]'))m.remove()});return m;
+ }
+ const actions=$('#sh53Toolbar .sh53-actions');
+ if(actions&&!$('#sh58Analytics')){
+  const make=(id,label)=>{const b=document.createElement('button');b.id=id;b.className='btn small';b.textContent=label;actions.appendChild(b);return b};
+  const analytics=make('sh58Analytics','Creator analytics');
+  const history=make('sh58History','Version history');
+  const discovery=make('sh58Discovery','Advanced discovery');
+  analytics.onclick=()=>{
+   const me=window.user,all=Array.isArray(window.scripts)?window.scripts:[];
+   const own=me?all.filter(s=>String(s.owner_id||s.user_id||'')===String(me.id)):[],publicCount=own.filter(s=>(s.visibility||'public')==='public').length;
+   const likes=own.reduce((n,s)=>n+Number(s.likes_count||s.like_count||s.likes||0),0);
+   const views=own.reduce((n,s)=>n+Number(s.views_count||s.view_count||s.views||0),0);
+   const codeLines=own.reduce((n,s)=>n+String(s.code||'').split('\n').length,0);
+   openPanel('sh58AnalyticsModal','Creator analytics',
+    '<p style="color:#91a3ba;line-height:1.6">A snapshot of the script records currently loaded in ScriptHub. View/like totals appear only when those fields are available in your data.</p><div class="sh58-metrics"><div class="sh58-metric"><strong>'+own.length+'</strong><span>Your scripts</span></div><div class="sh58-metric"><strong>'+publicCount+'</strong><span>Public scripts</span></div><div class="sh58-metric"><strong>'+likes+'</strong><span>Recorded likes</span></div><div class="sh58-metric"><strong>'+codeLines.toLocaleString()+'</strong><span>Code lines</span></div></div><div class="sh58-metric"><strong>'+views.toLocaleString()+'</strong><span>Recorded views, when tracked by the database</span></div>');
+  };
+  const historyKey=()=> 'sh58_versions_'+(window.user?.id||'guest');
+  function readVersions(){try{return JSON.parse(localStorage.getItem(historyKey())||'[]')}catch(_){return []}}
+  function saveVersion(){
+   if(!window.user||!$('#editModal')?.classList.contains('show'))return;
+   const title=$('#scriptTitle')?.value?.trim()||'Untitled script',code=window.editor?.getValue?.()??$('#codeInput')?.value??'';
+   const id=window.editingId||'draft:'+title;
+   const all=readVersions(),prev=all.find(x=>String(x.id)===String(id));
+   if(prev&&prev.code===code&&prev.title===title)return;
+   all.unshift({id:String(id),title,code,at:new Date().toISOString(),lines:code.split('\n').length});
+   localStorage.setItem(historyKey(),JSON.stringify(all.slice(0,150)));
+  }
+  const saveBtn=$('#saveScript');if(saveBtn)saveBtn.addEventListener('click',()=>setTimeout(saveVersion,900));
+  history.onclick=()=>{
+   const all=readVersions();
+   const html=all.length?all.map((v,i)=>'<div class="sh58-history-item"><div style="min-width:0"><strong>'+escapeHtml(v.title)+'</strong><br><small>'+new Date(v.at).toLocaleString()+' · '+v.lines+' lines</small></div><button class="btn small" data-version="'+i+'">Restore to editor</button></div>').join(''):'<p style="color:#91a3ba">No local snapshots yet. Open a script and save it to start building version history on this device.</p>';
+   const m=openPanel('sh58HistoryModal','Version history','<p style="color:#91a3ba">Snapshots are stored locally in this browser for your account. They are not cloud history and will not sync to another device.</p><div id="sh58Versions">'+html+'</div>');
+   m.addEventListener('click',e=>{const b=e.target.closest('[data-version]');if(!b)return;const v=readVersions()[Number(b.dataset.version)];if(!v)return;if(typeof window.openEditor==='function')window.openEditor();setTimeout(()=>{if(window.editor)window.editor.setValue(v.code);else if($('#codeInput'))$('#codeInput').value=v.code;if($('#scriptTitle'))$('#scriptTitle').value=v.title},120);m.remove()});
+  };
+  discovery.onclick=()=>{
+   const all=Array.isArray(window.scripts)?window.scripts:[];
+   const m=openPanel('sh58DiscoveryModal','Advanced discovery','<div class="sh58-row" style="margin:18px 0"><input id="sh58Query" placeholder="Search title, description or code..." style="flex:1;min-width:180px"><select id="sh58Type"><option value="">All script types</option><option>Script</option><option>LocalScript</option><option>ModuleScript</option></select><select id="sh58Sort"><option value="new">Newest first</option><option value="title">Title A–Z</option><option value="lines">Most lines</option></select></div><div id="sh58Results" style="display:grid;gap:8px"></div>');
+   const render=()=>{
+    const q=$('#sh58Query').value.toLowerCase(),type=$('#sh58Type').value,sort=$('#sh58Sort').value;
+    let list=all.filter(s=>(!type||s.type===type)&&[s.title,s.description,s.code].some(x=>String(x||'').toLowerCase().includes(q)));
+    if(sort==='title')list.sort((a,b)=>String(a.title).localeCompare(String(b.title)));
+    if(sort==='lines')list.sort((a,b)=>String(b.code||'').split('\n').length-String(a.code||'').split('\n').length);
+    if(sort==='new')list.sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
+    $('#sh58Results').innerHTML=list.slice(0,100).map(s=>'<button class="btn" data-open-discovery="'+String(s.id).replace(/"/g,'&quot;')+'" style="text-align:left;display:block;padding:12px!important"><strong>'+escapeHtml(s.title||'Untitled')+'</strong><div style="color:#91a3ba;font-size:12px;margin-top:4px">'+escapeHtml(s.type||'Script')+' · '+String(s.code||'').split('\n').length+' lines · '+escapeHtml(s.description||'')+'</div></button>').join('')||'<p style="color:#91a3ba">No scripts match those filters.</p>';
+   };
+   ['#sh58Query','#sh58Type','#sh58Sort'].forEach(sel=>$(sel).addEventListener(sel==='#sh58Query'?'input':'change',render));
+   m.addEventListener('click',e=>{const b=e.target.closest('[data-open-discovery]');if(b&&typeof window.showScript==='function')window.showScript(b.dataset.openDiscovery)});render();
+  };
+ }
+ // Challenge completion tracker; completion persists on this device and is user-scoped.
+ const challengeButton=$('#sh54Challenge');
+ if(challengeButton){
+  const key=()=> 'sh58_challenges_'+(window.user?.id||'guest');
+  function completed(){try{return JSON.parse(localStorage.getItem(key())||'[]')}catch(_){return []}}
+  challengeButton.addEventListener('click',()=>{
+   setTimeout(()=>{
+    const m=$('#sh55ChallengeModal');if(!m||m.dataset.sh58Ready)return;m.dataset.sh58Ready='1';
+    const title=m.querySelector('#sh55Title'),actions=m.querySelector('section>div:last-child');
+    if(!title||!actions)return;
+    const row=document.createElement('div');row.className='sh58-row';row.style.marginTop='14px';
+    const done=document.createElement('button');done.className='btn small';done.textContent='Mark challenge complete';
+    const stats=document.createElement('span');stats.style.cssText='font-size:12px;color:#91a3ba';
+    const update=()=>{const list=completed(),name=title.textContent;done.textContent=list.includes(name)?'Completed':'Mark challenge complete';done.disabled=list.includes(name);stats.textContent=list.length+' completed challenges'};
+    done.onclick=()=>{const name=title.textContent,list=completed();if(!list.includes(name)){list.push(name);localStorage.setItem(key(),JSON.stringify(list))}update()};
+    row.append(done,stats);actions.parentNode.insertBefore(row,actions);update();
+    const next=m.querySelector('#sh55Next');if(next)next.addEventListener('click',()=>setTimeout(update,0));
+   },0);
+  });
+ }
+ // Shared HTML escape helper for database-provided labels.
+ if(typeof window.escapeHtml!=='function')window.escapeHtml=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 })();
 </script>
 
