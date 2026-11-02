@@ -2689,4 +2689,98 @@ document.head.appendChild(sh53);
 })();
 </script>
 
+
+<script>
+/* ScriptHub 6.1 — bookmarks, code health checks, and persistent creator notes */
+(function(){
+ const $=s=>document.querySelector(s);
+ const css=document.createElement('style');
+ css.textContent=`
+ .sh61-modal{position:fixed;inset:0;z-index:10060;background:#000c;backdrop-filter:blur(9px);display:grid;place-items:center;padding:14px}
+ .sh61-panel{width:min(900px,100%);max-height:88dvh;overflow:auto;background:#070b12;color:#dce6f5;border:1px solid #263447;border-radius:16px;padding:clamp(16px,3vw,28px);box-shadow:0 24px 90px #0009}
+ .sh61-panel input,.sh61-panel textarea,.sh61-panel select{width:100%;box-sizing:border-box;background:#050a11;color:#dce6f5;border:1px solid #29394e;border-radius:9px;padding:12px;font:inherit}
+ .sh61-panel textarea{min-height:180px;resize:vertical;line-height:1.55}
+ .sh61-list{display:grid;gap:8px;margin-top:14px}
+ .sh61-item{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:12px;border:1px solid #202e40;background:#0a111c;border-radius:10px;min-width:0}
+ .sh61-item strong{overflow-wrap:anywhere}
+ .sh61-muted{color:#91a3ba;font-size:12px;line-height:1.55}
+ .sh61-pill{display:inline-block;padding:4px 8px;border:1px solid #30445d;border-radius:999px;font-size:11px;margin:3px}
+ .sh61-actions{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+ .sh61-result{padding:12px;border-radius:10px;border:1px solid #24364b;background:#0a111c;margin:8px 0}
+ .sh61-good{color:#83d6ae}.sh61-warn{color:#f4c779}
+ @media(max-width:600px){.sh61-modal{padding:8px}.sh61-panel{max-height:90dvh;padding:14px}.sh61-item{align-items:flex-start;flex-direction:column}.sh61-actions button{flex:1}}
+ `;
+ document.head.appendChild(css);
+ const uid=()=>window.user?.id||'guest';
+ const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch(_){return fallback}};
+ const write=(key,val)=>localStorage.setItem(key,JSON.stringify(val));
+ const esc=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+ function modal(title,body,id){
+  document.getElementById(id)?.remove();
+  const m=document.createElement('div');m.className='sh61-modal';m.id=id;
+  m.innerHTML='<section class="sh61-panel"><header style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div><div style="font-size:10px;letter-spacing:.14em;color:#91a5bf">CREATOR TOOLS</div><h2 style="margin:6px 0;font-size:24px">'+title+'</h2></div><button class="btn small" data-close>Close</button></header>'+body+'</section>';
+  document.body.appendChild(m);m.addEventListener('click',e=>{if(e.target===m||e.target.closest('[data-close]'))m.remove()});return m;
+ }
+ const key=()=> 'sh61_bookmarks_'+uid(), notesKey=()=> 'sh61_notes_'+uid();
+ function allScripts(){return Array.isArray(window.scripts)?window.scripts:[]}
+ function openOne(id){if(typeof window.showScript==='function')window.showScript(id)}
+ const actions=$('#sh53Toolbar .sh53-actions');
+ if(actions&&!$('#sh61Tools')){
+  const b=document.createElement('button');b.id='sh61Tools';b.className='btn small';b.textContent='Creator toolbox';actions.appendChild(b);
+  b.onclick=()=>{
+   const m=modal('Creator toolbox','<p class="sh61-muted">Quick access to saved scripts, a Lua code health check, and private notes.</p><div class="sh61-actions"><button class="btn" data-tool="bookmarks">Saved scripts</button><button class="btn" data-tool="check">Code health check</button><button class="btn" data-tool="notes">Creator notes</button></div><div class="sh61-result"><strong>Tip</strong><p class="sh61-muted">Saved scripts and notes are stored in this browser. They are not public and do not sync across devices.</p></div>','sh61Home');
+   m.addEventListener('click',e=>{const x=e.target.closest('[data-tool]');if(!x)return;if(x.dataset.tool==='bookmarks')bookmarks();if(x.dataset.tool==='check')checker();if(x.dataset.tool==='notes')notes()});
+  };
+ }
+ function bookmarks(){
+  const ids=read(key(),[]),all=allScripts(),saved=ids.map(id=>all.find(s=>String(s.id)===String(id))).filter(Boolean);
+  const m=modal('Saved scripts','<p class="sh61-muted">Bookmark useful scripts so you can find them quickly later.</p><input id="sh61Find" placeholder="Filter saved scripts..."><div class="sh61-list" id="sh61SavedList"></div><p class="sh61-muted" id="sh61SavedCount"></p>','sh61Bookmarks');
+  const render=()=>{const q=$('#sh61Find').value.toLowerCase(),list=saved.filter(s=>String(s.title||'').toLowerCase().includes(q)||String(s.description||'').toLowerCase().includes(q));$('#sh61SavedList').innerHTML=list.map(s=>'<div class="sh61-item"><div><strong>'+esc(s.title||'Untitled script')+'</strong><div class="sh61-muted">'+esc(s.type||'Script')+' · '+String(s.code||'').split('\n').length+' lines</div></div><div class="sh61-actions"><button class="btn small" data-open="'+esc(s.id)+'">Open</button><button class="btn small" data-remove="'+esc(s.id)+'">Remove</button></div></div>').join('')||'<p class="sh61-muted">No saved scripts yet. Use the bookmark button on a script card.</p>';$('#sh61SavedCount').textContent=list.length+' saved scripts'};
+  $('#sh61Find').addEventListener('input',render);
+  m.addEventListener('click',e=>{const o=e.target.closest('[data-open]');if(o){openOne(o.dataset.open);m.remove()}const r=e.target.closest('[data-remove]');if(r){write(key(),read(key(),[]).filter(id=>String(id)!==r.dataset.remove));r.closest('.sh61-item').remove();}});
+  render();
+ }
+ // Add bookmark controls to script cards without modifying the site's card renderer.
+ function decorateCards(){
+  const ids=read(key(),[]);
+  document.querySelectorAll('#scriptGrid [data-open]').forEach(cardButton=>{
+   const card=cardButton.closest('.card')||cardButton.parentElement;
+   const id=cardButton.getAttribute('data-open');if(!card||!id||card.querySelector('[data-sh61-bookmark]'))return;
+   const b=document.createElement('button');b.type='button';b.className='btn small';b.dataset.sh61Bookmark=id;b.textContent=ids.some(x=>String(x)===String(id))?'Saved':'Save script';b.style.cssText='margin:8px 0;max-width:100%';
+   b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();const saved=read(key(),[]),idx=saved.findIndex(x=>String(x)===String(id));if(idx>=0)saved.splice(idx,1);else saved.unshift(id);write(key(),saved);b.textContent=idx>=0?'Save script':'Saved';if(typeof toast==='function')toast(idx>=0?'Removed from saved scripts.':'Script bookmarked.')});
+   card.appendChild(b);
+  });
+ }
+ decorateCards();
+ const grid=$('#scriptGrid');
+ if(grid)new MutationObserver(()=>decorateCards()).observe(grid,{childList:true,subtree:true});
+ function currentCode(){return window.editor?.getValue?.()??$('#codeInput')?.value??''}
+ function checker(){
+  const code=currentCode(),lines=code.split('\n'),issues=[];
+  if(!code.trim())issues.push(['warn','No code detected','Open a script in the editor or paste Lua source to analyze it.']);
+  if(/while\s+true\s+do/i.test(code)&&!/(task\.wait|wait\s*\()/i.test(code))issues.push(['warn','Possible tight loop','A continuous loop without a yield can freeze or heavily load a game.']);
+  if(/\.Touched\s*:\s*Connect/i.test(code)&&!/debounce|cooldown/i.test(code))issues.push(['warn','Check repeated touch events','Consider a debounce if the action should not trigger many times quickly.']);
+  if(/RemoteEvent|OnServerEvent/i.test(code)&&/OnServerEvent/i.test(code)&&!/(typeof|math\.clamp|Magnitude|UserId|IsA\()/i.test(code))issues.push(['warn','Review remote validation','Validate types, permissions, and distance on the server before trusting client input.']);
+  if(/WaitForChild\s*\(\s*["'][^"']+["']\s*\)/i.test(code))issues.push(['good','WaitForChild found','This can help wait for instances that replicate later. Add a timeout where indefinite waiting would be a problem.']);
+  if(/require\s*\(\s*\d+\s*\)/i.test(code))issues.push(['warn','Numeric asset require','Review the required asset and trustworthiness before using it.']);
+  const opens=(code.match(/\b(function|then|do|repeat)\b/g)||[]).length,ends=(code.match(/\bend\b/g)||[]).length,repeats=(code.match(/\brepeat\b/g)||[]).length,untils=(code.match(/\buntil\b/g)||[]).length;
+  if(opens>ends+repeats)issues.push(['warn','Check block endings','The rough keyword count suggests a possible missing end. This is not a full Lua parser.']);
+  if(repeats>untils)issues.push(['warn','Check repeat/until','A repeat block may be missing its until condition.']);
+  if(!issues.length)issues.push(['good','No common warning patterns found','This quick check is heuristic only; it cannot prove that the script runs correctly.']);
+  const body='<p class="sh61-muted">Analyzes the current editor contents using simple pattern checks. It is not a full Lua parser and does not execute your code.</p><div class="sh61-actions"><button class="btn" id="sh61RunCheck">Analyze editor code</button><button class="btn" id="sh61PasteCheck">Analyze pasted code</button></div><textarea id="sh61Input" placeholder="Paste Lua code here if the editor is closed...">'+esc(code)+'</textarea><div id="sh61Report"></div>';
+  const m=modal('Code health check',body,'sh61Checker');
+  function analyze(src){const results=[];if(!src.trim())results.push(['warn','Empty source','Paste code or open a script first.']);else{if(/while\s+true\s+do/i.test(src)&&!/(task\.wait|wait\s*\()/i.test(src))results.push(['warn','Possible tight loop','Consider yielding inside continuous loops.']);if(/require\s*\(\s*\d+\s*\)/i.test(src))results.push(['warn','Numeric asset require','Check asset trust and permissions.']);if(/OnServerEvent/i.test(src)&&!/(typeof|math\.clamp|Magnitude|UserId|IsA\()/i.test(src))results.push(['warn','Remote validation review','Validate every client-supplied value on the server.']);if(/WaitForChild\s*\(/i.test(src))results.push(['good','WaitForChild detected','Consider timeouts for objects that might never appear.']);if(/pcall\s*\(/i.test(src))results.push(['good','Protected call detected','Make sure failures are logged or handled meaningfully.']);if(!results.length)results.push(['good','No common warning patterns found','This is a quick heuristic scan, not a correctness guarantee.'])}$('#sh61Report').innerHTML=results.map(x=>'<div class="sh61-result"><strong class="'+(x[0]==='good'?'sh61-good':'sh61-warn')+'">'+x[1]+'</strong><p class="sh61-muted">'+x[2]+'</p></div>').join('')+'<div class="sh61-muted">'+src.split('\n').length+' lines · '+src.length+' characters</div>'}
+  $('#sh61RunCheck').onclick=()=>analyze(currentCode());$('#sh61PasteCheck').onclick=()=>analyze($('#sh61Input').value);analyze(code);
+ }
+ function notes(){
+  const saved=read(notesKey(),{text:'',updated:null});
+  const m=modal('Creator notes','<p class="sh61-muted">A private scratchpad for ideas, TODOs, bugs, and release notes. Autosaves on this device.</p><textarea id="sh61NoteText" placeholder="Ideas, bugs to fix, script roadmap...">'+esc(saved.text||'')+'</textarea><div class="sh61-actions"><button class="btn" id="sh61ExportNotes">Export notes</button><button class="btn" id="sh61ClearNotes">Clear notes</button></div><p class="sh61-muted" id="sh61NoteStatus">Last saved: '+(saved.updated?esc(new Date(saved.updated).toLocaleString()):'not yet saved')+'</p>','sh61Notes');
+  let timer;const area=$('#sh61NoteText');
+  area.addEventListener('input',()=>{clearTimeout(timer);$('#sh61NoteStatus').textContent='Saving…';timer=setTimeout(()=>{const data={text:area.value,updated:new Date().toISOString()};write(notesKey(),data);$('#sh61NoteStatus').textContent='Saved locally at '+new Date(data.updated).toLocaleTimeString()},250)});
+  $('#sh61ClearNotes').onclick=()=>{area.value='';area.dispatchEvent(new Event('input'))};
+  $('#sh61ExportNotes').onclick=()=>{const blob=new Blob([area.value],{type:'text/plain;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='scripthub-creator-notes.txt';a.click();URL.revokeObjectURL(url)};
+ }
+})();
+</script>
+
 </body></html>
