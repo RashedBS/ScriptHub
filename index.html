@@ -2297,4 +2297,59 @@ document.head.appendChild(sh53);
 })();
 </script>
 
+
+<script>
+/* ScriptHub 5.5 — randomized Roblox Lua challenge deck */
+(function(){
+ const button=document.getElementById("sh54Challenge");if(!button)return;
+ const deck=[
+  ["Number Formatter","Utility","Beginner","Build a reusable module that converts 1200 to 1.2K and 1500000 to 1.5M.","Bonus: support negative numbers and invalid input."],
+  ["Cooldown Module","Gameplay","Beginner","Create a reusable cooldown module that prevents an ability from being used again for 3 seconds.","Bonus: return the remaining cooldown time."],
+  ["Coin Pickup","Gameplay","Beginner","Make a coin pickup system that disappears when touched and awards the player 10 coins.","Bonus: prevent multiple players from claiming the same coin."],
+  ["Leaderstats Setup","Player Data","Beginner","Create leaderstats with Coins and Wins values for each new player.","Bonus: add a clear helper function for awarding coins."],
+  ["Mobile Sprint Button","Mobile UI","Intermediate","Build a mobile-friendly sprint button that increases WalkSpeed while held and restores it when released.","Bonus: make sure the speed resets when the character respawns."],
+  ["Damage Number Formatter","Utility","Beginner","Write a function that formats damage values to one decimal place only when needed.","Bonus: handle nil and non-number values safely."],
+  ["Inventory Module","Architecture","Intermediate","Design a ModuleScript with AddItem, RemoveItem, and GetCount methods.","Bonus: reject invalid item names and negative amounts."],
+  ["NPC Patrol","AI","Intermediate","Make an NPC move between a list of waypoint parts in order.","Bonus: pause briefly at each waypoint."],
+  ["Round Timer","Gameplay","Intermediate","Create a round timer that counts down from 60 seconds and announces when the round ends.","Bonus: make it easy to change the round length."],
+  ["Data Validation","Security","Intermediate","Write a server-side function that validates a requested coin reward before applying it.","Bonus: reject negative, non-numeric, and unusually large rewards."],
+  ["Button Debounce","UI","Beginner","Create a GUI button handler that cannot be triggered repeatedly while its action is running.","Bonus: always release the debounce even if the action errors."],
+  ["Random Loot Picker","Gameplay","Intermediate","Build a weighted loot picker where common items appear more often than rare items.","Bonus: keep all item weights in one editable table."],
+  ["Save Settings","Player Data","Intermediate","Create a simple settings table for music volume and camera sensitivity, with safe default values.","Bonus: explain where persistent saving belongs."],
+  ["Team Balancer","Gameplay","Advanced","Write a function that assigns a player to the smaller of two teams.","Bonus: handle equal team sizes fairly."],
+  ["Damage Calculator","Combat","Intermediate","Write a function that calculates damage after armor reduction, without allowing negative damage.","Bonus: add a headshot multiplier."],
+  ["Proximity Prompt Door","World Systems","Beginner","Make a door open when a player activates a ProximityPrompt and close after a short delay.","Bonus: stop overlapping close timers from fighting each other."],
+  ["Quest Tracker","Gameplay","Advanced","Design a quest table that tracks progress toward collecting 5 items and marks the quest complete.","Bonus: support more than one quest."],
+  ["Safe Remote Handler","Security","Advanced","Create a server RemoteEvent handler that checks the player's request type and validates all inputs before acting.","Bonus: add a simple per-player rate limit."],
+  ["Format Play Time","Utility","Beginner","Write a function that converts seconds into a readable format such as 3661 → 1h 1m 1s.","Bonus: omit zero-valued units."],
+  ["Character Respawn Hook","Player Systems","Intermediate","Set up a clean CharacterAdded handler that safely finds the Humanoid and runs setup logic each respawn.","Bonus: avoid stacking duplicate event connections."],
+  ["Folder-Based Config","Architecture","Intermediate","Design a configuration table for a tool with damage, cooldown, and range values, then read it from another script.","Bonus: use defaults when a setting is missing."],
+  ["Daily Reward Logic","Player Data","Advanced","Design the server-side logic for allowing one daily reward per player, explaining how you would store the last claim time.","Bonus: account for server restarts and time validation."],
+  ["Color Cycle Effect","Visual Effects","Beginner","Create a smooth color-cycle effect for a Part using TweenService.","Bonus: clean up or reuse tweens instead of creating endless duplicates."],
+  ["Admin Command Parser","Utility","Advanced","Write a command parser that accepts a small allowlist of commands and validates arguments before execution.","Bonus: explain why permissions must be checked on the server."],
+  ["Object Pooling","Performance","Advanced","Design a small object pool for repeatedly spawned visual effects so old instances can be reused.","Bonus: include Acquire and Release functions."]
+ ];
+ let last=-1,seen=new Set();
+ const choose=()=>{
+  let pool=deck.map((_,i)=>i).filter(i=>i!==last);
+  if(seen.size>=deck.length-1){seen.clear();pool=pool.filter(i=>i!==last)}
+  pool=pool.filter(i=>!seen.has(i));if(!pool.length)pool=deck.map((_,i)=>i).filter(i=>i!==last);
+  const idx=pool[Math.floor(Math.random()*pool.length)];last=idx;seen.add(idx);return deck[idx];
+ };
+ button.onclick=()=>{
+  if(document.getElementById("sh55ChallengeModal"))return;
+  const modal=document.createElement("div");modal.id="sh55ChallengeModal";
+  modal.style.cssText="position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:16px;background:#000d;backdrop-filter:blur(10px);opacity:0;transition:opacity .2s";
+  modal.innerHTML='<section style="width:min(480px,100%);max-height:90dvh;overflow:auto;background:#06090e;border:1px solid #263447;border-radius:15px;padding:22px;transform:translateY(8px);transition:transform .2s"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#91a5bf">Random challenge</div><span id="sh55Count" style="font-size:11px;color:#8292a8">25 challenges</span></div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:13px"><span id="sh55Category" style="font-size:11px;padding:5px 8px;border:1px solid #263447;border-radius:6px;color:#b8c8dd"></span><span id="sh55Level" style="font-size:11px;padding:5px 8px;border:1px solid #263447;border-radius:6px;color:#b8c8dd"></span></div><h2 id="sh55Title" style="font-size:23px;margin:12px 0 8px"></h2><p id="sh55Desc" style="line-height:1.7;color:#c0ccdc"></p><div style="padding:12px;background:#030609;border:1px solid #182434;border-radius:9px;font-size:13px;color:#aab8ca"><strong style="color:#dce7f6">Bonus objective</strong><div id="sh55Bonus" style="margin-top:5px;line-height:1.55"></div></div><div style="font-size:11px;color:#718198;margin-top:12px">Each draw is random. Challenges avoid repeating until the deck has been explored.</div><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:18px"><button class="btn small" id="sh55Close">Close</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn small" id="sh55Next">Another challenge</button><button class="btn primary small" id="sh55Start">Start creating</button></div></div></section>';
+  document.body.appendChild(modal);
+  const render=()=>{const d=choose();modal.querySelector("#sh55Category").textContent=d[1];modal.querySelector("#sh55Level").textContent=d[2];modal.querySelector("#sh55Title").textContent=d[0];modal.querySelector("#sh55Desc").textContent=d[3];modal.querySelector("#sh55Bonus").textContent=d[4]};
+  render();requestAnimationFrame(()=>{modal.style.opacity="1";modal.firstElementChild.style.transform="translateY(0)"});
+  const close=()=>{modal.style.opacity="0";modal.firstElementChild.style.transform="translateY(8px)";setTimeout(()=>modal.remove(),210)};
+  modal.querySelector("#sh55Close").onclick=close;modal.querySelector("#sh55Next").onclick=render;
+  modal.addEventListener("click",e=>{if(e.target===modal)close()});
+  modal.querySelector("#sh55Start").onclick=()=>{close();const create=document.getElementById("sh52Create");if(create)create.click();else if(typeof openEditor==="function")openEditor()};
+ };
+})();
+</script>
+
 </body></html>
