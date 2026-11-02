@@ -2783,4 +2783,81 @@ document.head.appendChild(sh53);
 })();
 </script>
 
+
+<script>
+/* ScriptHub 6.2 — visible bookmark icons, saved folders, darker premium theme */
+(function(){
+ const $=s=>document.querySelector(s);
+ const uid=()=>window.user?.id||'guest';
+ const read=(k,f)=>{try{return JSON.parse(localStorage.getItem(k)||'null')??f}catch(_){return f}};
+ const write=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+ const scriptKey=()=> 'sh62_bookmarked_scripts_'+uid();
+ const folderKey=()=> 'sh62_bookmarked_folders_'+uid();
+ const svg=(name)=>name==='bookmark'?'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.75A1.75 1.75 0 0 1 7.75 3h8.5A1.75 1.75 0 0 1 18 4.75V21l-6-3.8L6 21V4.75Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>':'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6H10l2 2h7.5A1.5 1.5 0 0 1 21 9.5v8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-10Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>';
+ const style=document.createElement('style');
+ style.textContent=`
+ :root{--bg:#050609;--panel:#0a0d13;--panel2:#0e131c;--line:#1c2635;--muted:#8795aa;--text:#e8eef8;--blue:#7896ff;--cyan:#72d7d0}
+ body{background:radial-gradient(ellipse at 50% -20%,#111a2b 0,transparent 45%),#050609!important}
+ .top{background:#050609ed!important;border-color:#171e2a!important}
+ .side,.card,.modalbox{background:linear-gradient(145deg,#0c111a,#080b11)!important;border-color:#1a2432!important}
+ .btn,.tab,.navbtn{transition:background .18s,border-color .18s,transform .18s}
+ .btn:hover,.tab:hover{border-color:#405575;transform:translateY(-1px)}
+ .sh62-bookmark{display:inline-flex!important;align-items:center;justify-content:center;gap:7px;min-width:38px;min-height:38px;padding:8px 10px!important;border:1px solid #26364b!important;border-radius:10px!important;background:#090e16!important;color:#a9bad0!important;line-height:1}
+ .sh62-bookmark svg{width:18px;height:18px;flex:none}
+ .sh62-bookmark.is-saved{color:#a8c4ff!important;border-color:#5677bd!important;background:#111e35!important}
+ .sh62-folder-bookmark{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:7px 10px;border:1px solid #26364b;border-radius:9px;background:#080d14;color:#a9bad0}
+ .sh62-folder-bookmark svg{width:17px;height:17px}
+ .sh62-saved-bar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+ .sh62-saved-bar button{display:inline-flex;align-items:center;gap:7px}
+ @media(max-width:700px){.sh62-bookmark{min-width:40px;min-height:40px}.sh62-saved-bar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.sh62-saved-bar button{justify-content:center;min-width:0}}
+ `;
+ document.head.appendChild(style);
+ function toastMsg(t){if(typeof window.toast==='function')window.toast(t)}
+ function toggle(key,id,button,label){
+  const list=read(key,[]),i=list.findIndex(x=>String(x)===String(id));
+  if(i>=0)list.splice(i,1);else list.unshift(id);write(key,list);
+  if(button){button.classList.toggle('is-saved',i<0);button.innerHTML=svg('bookmark')+'<span>'+(i<0?(label||'Saved'):'Save')+'</span>';button.setAttribute('aria-label',i<0?'Remove bookmark':'Save bookmark');button.title=i<0?'Saved':'Save for later'}
+  toastMsg(i<0?'Added to saved items.':'Removed from saved items.');
+ }
+ function decorateScripts(){
+  const saved=read(scriptKey(),[]);
+  document.querySelectorAll('#scriptGrid [data-open]').forEach(open=>{
+   const card=open.closest('.card,.script,article')||open.parentElement,id=open.dataset.open;
+   if(!card||!id||card.querySelector('[data-sh62-script-bookmark]'))return;
+   const b=document.createElement('button');b.type='button';b.className='sh62-bookmark';b.dataset.sh62ScriptBookmark=id;
+   const is=saved.some(x=>String(x)===String(id));b.classList.toggle('is-saved',is);b.innerHTML=svg('bookmark')+'<span>'+(is?'Saved':'Save')+'</span>';b.title=is?'Remove bookmark':'Save for later';b.setAttribute('aria-label',b.title);
+   b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();toggle(scriptKey(),id,b,'Saved')});
+   const actions=card.querySelector('.actions')||card.querySelector('.sh61-actions')||card;
+   actions.appendChild(b);
+  });
+ }
+ function decorateFolders(){
+  document.querySelectorAll('#folderList [data-folder]').forEach(card=>{
+   const id=card.dataset.folder;if(!id||card.querySelector('[data-sh62-folder-bookmark]'))return;
+   const b=document.createElement('button');b.type='button';b.className='sh62-folder-bookmark';b.dataset.sh62FolderBookmark=id;
+   const is=read(folderKey(),[]).some(x=>String(x)===String(id));b.classList.toggle('is-saved',is);b.innerHTML=svg('bookmark')+'<span>'+(is?'Saved':'Save folder')+'</span>';b.title=is?'Remove saved folder':'Save folder';
+   b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();toggle(folderKey(),id,b,'Saved');});
+   card.appendChild(b);
+  });
+ }
+ function addSavedTools(){
+  const toolbar=$('#sh53Toolbar .sh53-actions');if(!toolbar||$('#sh62SavedItems'))return;
+  const b=document.createElement('button');b.id='sh62SavedItems';b.className='btn small';b.innerHTML=svg('bookmark')+' Saved items';toolbar.appendChild(b);
+  b.onclick=()=>{
+   const savedScripts=read(scriptKey(),[]),savedFolders=read(folderKey(),[]);
+   const scriptList=savedScripts.map(id=>(window.scripts||[]).find(s=>String(s.id)===String(id))).filter(Boolean);
+   const folderList=(window.shFolders||[]).filter(f=>savedFolders.some(id=>String(id)===String(f.id)));
+   const overlay=document.createElement('div');overlay.className='sh61-modal';overlay.style.zIndex='10080';overlay.innerHTML='<section class="sh61-panel"><header style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div><div class="sh61-muted">YOUR LIBRARY</div><h2 style="margin:6px 0">Saved items</h2></div><button class="btn small" data-close>Close</button></header><p class="sh61-muted">Your personal bookmarks on this device.</p><h3>Scripts</h3><div class="sh61-list">'+(scriptList.map(s=>'<div class="sh61-item"><strong>'+String(s.title||'Untitled').replace(/[&<>"]/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[x]))+'</strong><button class="btn small" data-script="'+String(s.id)+'">Open</button></div>').join('')||'<p class="sh61-muted">No saved scripts yet. Tap the bookmark icon on a script card.</p>')+'</div><h3>Folders</h3><div class="sh61-list">'+(folderList.map(f=>'<div class="sh61-item"><strong>'+String(f.name||'Untitled folder').replace(/[&<>"]/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[x]))+'</strong><button class="btn small" data-folder-open="'+String(f.id)+'">Open folder</button></div>').join('')||'<p class="sh61-muted">No saved folders yet. Bookmark a folder from Your folders.</p>')+'</div></section>';
+   document.body.appendChild(overlay);overlay.addEventListener('click',e=>{if(e.target===overlay||e.target.closest('[data-close]'))overlay.remove();const s=e.target.closest('[data-script]');if(s){if(typeof window.showScript==='function')window.showScript(s.dataset.script);overlay.remove()}const f=e.target.closest('[data-folder-open]');if(f){window.shFolderFilter=f.dataset.folderOpen;if(typeof window.shLoad==='function')window.shLoad();overlay.remove()}});
+  };
+ }
+ document.addEventListener('click',e=>{if(e.target.closest('[data-sh62-script-bookmark],[data-sh62-folder-bookmark]'))return;},true);
+ decorateScripts();decorateFolders();addSavedTools();
+ const grid=$('#scriptGrid');if(grid)new MutationObserver(()=>decorateScripts()).observe(grid,{childList:true,subtree:true});
+ const folders=$('#folderList');if(folders)new MutationObserver(()=>decorateFolders()).observe(folders,{childList:true,subtree:true});
+ document.querySelector('#folderWorkspace')?.addEventListener('click',()=>setTimeout(decorateFolders,0));
+ document.querySelector('#scriptGrid')?.addEventListener('click',()=>setTimeout(decorateScripts,0));
+})();
+</script>
+
 </body></html>
