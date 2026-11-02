@@ -2859,4 +2859,58 @@ document.head.appendChild(sh53);
 })();
 </script>
 
+
+<script>
+/* ScriptHub 6.4 — primary-button hover, challenge close placement, animated folders, view code */
+(function(){
+ const css=document.createElement('style');
+ css.textContent=`
+ .btn.primary,.btn.primary:visited{background:linear-gradient(110deg,#286fce,#1d56ae)!important;color:#fff!important;border:1px solid #4b8ee7!important;box-shadow:0 7px 22px #1765e033}
+ .btn.primary:hover,.btn.primary:focus-visible,.btn.primary:active{background:linear-gradient(110deg,#347fe0,#2467c7)!important;color:#fff!important;border-color:#76b0ff!important;box-shadow:0 8px 24px #1765e055!important;filter:none!important}
+ .btn.primary:hover{transform:translateY(-1px)}
+ #sh54ChallengeModal{overflow-y:auto}
+ #sh54ChallengeModal>section{position:relative;padding-top:62px!important}
+ #sh54ChallengeModal #sh54Close{position:absolute;top:16px;left:18px;right:auto}
+ .folder-contents{display:grid!important;grid-template-rows:0fr;opacity:0;transform:translateY(-5px);transition:grid-template-rows .28s ease,opacity .22s ease,transform .28s ease;overflow:hidden}
+ .folder-contents>*{min-height:0}
+ .folder-accordion.open .folder-contents{grid-template-rows:1fr;opacity:1;transform:translateY(0)}
+ .folder-accordion .folder-chevron{transition:transform .25s ease}
+ .folder-accordion.open .folder-chevron{transform:rotate(90deg)}
+ .folder-accordion{transition:border-color .22s,background .22s}
+ .folder-script-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+ .folder-script-row .folder-script-name{flex:1 1 100px;min-width:0;overflow-wrap:anywhere}
+ .folder-script-row [data-folder-view]{flex:0 0 auto}
+ @media(prefers-reduced-motion:reduce){.folder-contents,.folder-chevron,.folder-accordion,.btn.primary{transition:none!important;animation:none!important}}
+ `;
+ document.head.appendChild(css);
+ // Move the challenge close button into the upper-left corner and keep the action row clean.
+ function fixChallenge(){
+  const modal=document.getElementById('sh54ChallengeModal');if(!modal)return;
+  const panel=modal.firstElementChild,close=modal.querySelector('#sh54Close');if(!panel||!close)return;
+  close.textContent='Close';close.style.cssText='position:absolute;top:14px;left:16px;right:auto';
+  const row=close.parentElement;
+  if(row&&row!==panel){row.style.justifyContent='flex-end';row.style.marginTop='18px';}
+ }
+ document.addEventListener('click',e=>{if(e.target.closest('#sh54Challenge'))setTimeout(fixChallenge,30)},true);
+ const challengeObs=new MutationObserver(()=>{if(document.getElementById('sh54ChallengeModal'))fixChallenge()});
+ challengeObs.observe(document.body,{childList:true,subtree:true});
+ // Add an explicit View code action to each script inside the user's folder accordion.
+ function addFolderView(){
+  document.querySelectorAll('#folderList [data-folder-script-delete]').forEach(del=>{
+   const row=del.closest('.folder-script-row');if(!row||row.querySelector('[data-folder-view]'))return;
+   const id=del.dataset.folderScriptDelete;
+   const view=document.createElement('button');view.type='button';view.className='btn small primary';view.textContent='View code';view.dataset.folderView=id;
+   row.insertBefore(view,del);
+  });
+ }
+ document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-folder-view]');if(!b)return;
+  e.preventDefault();e.stopPropagation();
+  if(typeof window.showScript==='function')window.showScript(b.dataset.folderView);
+ },true);
+ const host=document.getElementById('folderList');
+ if(host){addFolderView();new MutationObserver(addFolderView).observe(host,{childList:true,subtree:true})}
+})();
+</script>
+
 </body></html>
