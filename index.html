@@ -2784,79 +2784,100 @@ document.head.appendChild(sh53);
 </script>
 
 
+
+
+
 <script>
-/* ScriptHub 6.2 — visible bookmark icons, saved folders, darker premium theme */
+/* ScriptHub 6.3 — unified motion system and creator quality-of-life tools */
 (function(){
- const $=s=>document.querySelector(s);
- const uid=()=>window.user?.id||'guest';
- const read=(k,f)=>{try{return JSON.parse(localStorage.getItem(k)||'null')??f}catch(_){return f}};
- const write=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
- const scriptKey=()=> 'sh62_bookmarked_scripts_'+uid();
- const folderKey=()=> 'sh62_bookmarked_folders_'+uid();
- const svg=(name)=>name==='bookmark'?'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.75A1.75 1.75 0 0 1 7.75 3h8.5A1.75 1.75 0 0 1 18 4.75V21l-6-3.8L6 21V4.75Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>':'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6H10l2 2h7.5A1.5 1.5 0 0 1 21 9.5v8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-10Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>';
  const style=document.createElement('style');
  style.textContent=`
- :root{--bg:#050609;--panel:#0a0d13;--panel2:#0e131c;--line:#1c2635;--muted:#8795aa;--text:#e8eef8;--blue:#7896ff;--cyan:#72d7d0}
- body{background:radial-gradient(ellipse at 50% -20%,#111a2b 0,transparent 45%),#050609!important}
- .top{background:#050609ed!important;border-color:#171e2a!important}
- .side,.card,.modalbox{background:linear-gradient(145deg,#0c111a,#080b11)!important;border-color:#1a2432!important}
- .btn,.tab,.navbtn{transition:background .18s,border-color .18s,transform .18s}
- .btn:hover,.tab:hover{border-color:#405575;transform:translateY(-1px)}
- .sh62-bookmark{display:inline-flex!important;align-items:center;justify-content:center;gap:7px;min-width:38px;min-height:38px;padding:8px 10px!important;border:1px solid #26364b!important;border-radius:10px!important;background:#090e16!important;color:#a9bad0!important;line-height:1}
- .sh62-bookmark svg{width:18px;height:18px;flex:none}
- .sh62-bookmark.is-saved{color:#a8c4ff!important;border-color:#5677bd!important;background:#111e35!important}
- .sh62-folder-bookmark{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:7px 10px;border:1px solid #26364b;border-radius:9px;background:#080d14;color:#a9bad0}
- .sh62-folder-bookmark svg{width:17px;height:17px}
- .sh62-saved-bar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
- .sh62-saved-bar button{display:inline-flex;align-items:center;gap:7px}
- @media(max-width:700px){.sh62-bookmark{min-width:40px;min-height:40px}.sh62-saved-bar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.sh62-saved-bar button{justify-content:center;min-width:0}}
+ :root{color-scheme:dark}
+ body{background:#040507!important}
+ .card,.modalbox,.sh61-panel,.sh58-panel,.sh56-code-wrap,.sh56VaultModal{transition:border-color .22s,background .22s,box-shadow .22s}
+ .card:hover{border-color:#2a3a50!important;box-shadow:0 12px 32px #0004}
+ .sh63-animate{animation:sh63In .24s cubic-bezier(.2,.8,.2,1) both;transform-origin:center}
+ @keyframes sh63In{from{opacity:0;transform:translateY(9px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+ @keyframes sh63Out{from{opacity:1;transform:translateY(0) scale(1)}to{opacity:0;transform:translateY(7px) scale(.985)}}
+ .sh63-overlay{animation:sh63Fade .18s ease both}
+ @keyframes sh63Fade{from{opacity:0}to{opacity:1}}
+ .sh63-closing{animation:sh63Out .17s ease both!important;pointer-events:none!important}
+ .sh63-fab{position:fixed;right:18px;bottom:22px;z-index:5000;border:1px solid #2a3b54;border-radius:13px;background:#101722;color:#dce8fa;box-shadow:0 10px 34px #0008;padding:12px 15px;font-weight:650}
+ .sh63-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:12000;background:#101722;border:1px solid #2a3b54;color:#e7eefb;padding:11px 16px;border-radius:11px;box-shadow:0 12px 34px #0009;animation:sh63In .2s ease both}
+ .sh63-shortcuts{display:grid;grid-template-columns:auto 1fr;gap:10px 18px;margin-top:16px}
+ .sh63-shortcuts kbd{padding:4px 7px;border:1px solid #344155;border-radius:6px;background:#0b111b;color:#dce8fa;font:12px ui-monospace,monospace}
+ @media(max-width:700px){.sh63-fab{right:12px;bottom:14px}.sh63-toast{width:calc(100% - 28px);text-align:center}}
+ @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
  `;
  document.head.appendChild(style);
- function toastMsg(t){if(typeof window.toast==='function')window.toast(t)}
- function toggle(key,id,button,label){
-  const list=read(key,[]),i=list.findIndex(x=>String(x)===String(id));
-  if(i>=0)list.splice(i,1);else list.unshift(id);write(key,list);
-  if(button){button.classList.toggle('is-saved',i<0);button.innerHTML=svg('bookmark')+'<span>'+(i<0?(label||'Saved'):'Save')+'</span>';button.setAttribute('aria-label',i<0?'Remove bookmark':'Save bookmark');button.title=i<0?'Saved':'Save for later'}
-  toastMsg(i<0?'Added to saved items.':'Removed from saved items.');
- }
- function decorateScripts(){
-  const saved=read(scriptKey(),[]);
-  document.querySelectorAll('#scriptGrid [data-open]').forEach(open=>{
-   const card=open.closest('.card,.script,article')||open.parentElement,id=open.dataset.open;
-   if(!card||!id||card.querySelector('[data-sh62-script-bookmark]'))return;
-   const b=document.createElement('button');b.type='button';b.className='sh62-bookmark';b.dataset.sh62ScriptBookmark=id;
-   const is=saved.some(x=>String(x)===String(id));b.classList.toggle('is-saved',is);b.innerHTML=svg('bookmark')+'<span>'+(is?'Saved':'Save')+'</span>';b.title=is?'Remove bookmark':'Save for later';b.setAttribute('aria-label',b.title);
-   b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();toggle(scriptKey(),id,b,'Saved')});
-   const actions=card.querySelector('.actions')||card.querySelector('.sh61-actions')||card;
-   actions.appendChild(b);
+ // Animate existing and future modal/overlay panels without replacing app handlers.
+ function animateExisting(){
+  document.querySelectorAll('.modal.show,.modalbox.show,.sh61-modal,.sh55-modal,[role="dialog"],#sh56VaultModal').forEach(el=>{
+   if(el.dataset.sh63Animated)return;el.dataset.sh63Animated='1';el.classList.add('sh63-overlay');
+   const panel=el.querySelector('.modalbox,.sh61-panel,.sh58-panel,section,[role="document"]');
+   if(panel)panel.classList.add('sh63-animate');else el.classList.add('sh63-animate');
   });
  }
- function decorateFolders(){
-  document.querySelectorAll('#folderList [data-folder]').forEach(card=>{
-   const id=card.dataset.folder;if(!id||card.querySelector('[data-sh62-folder-bookmark]'))return;
-   const b=document.createElement('button');b.type='button';b.className='sh62-folder-bookmark';b.dataset.sh62FolderBookmark=id;
-   const is=read(folderKey(),[]).some(x=>String(x)===String(id));b.classList.toggle('is-saved',is);b.innerHTML=svg('bookmark')+'<span>'+(is?'Saved':'Save folder')+'</span>';b.title=is?'Remove saved folder':'Save folder';
-   b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();toggle(folderKey(),id,b,'Saved');});
-   card.appendChild(b);
-  });
+ const obs=new MutationObserver(records=>{
+  for(const r of records)for(const n of r.addedNodes)if(n.nodeType===1){
+   if(n.matches?.('.modal,.modalbox,.sh61-modal,.sh55-modal,[role="dialog"],#sh56VaultModal')){n.classList.add('sh63-overlay');const p=n.querySelector('.modalbox,.sh61-panel,.sh58-panel,section,[role="document"]');(p||n).classList.add('sh63-animate')}
+   n.querySelectorAll?.('.modal,.modalbox,.sh61-modal,.sh55-modal,[role="dialog"],#sh56VaultModal').forEach(el=>{el.classList.add('sh63-overlay');const p=el.querySelector('.modalbox,.sh61-panel,.sh58-panel,section,[role="document"]');(p||el).classList.add('sh63-animate')});
+  }
+ });
+ obs.observe(document.body,{childList:true,subtree:true});animateExisting();
+ // Animate closes via delegated capture while letting original close logic run.
+ document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-close],.close,.close-btn,[aria-label="Close"],button');
+  if(!b)return;
+  const label=(b.textContent||'').trim().toLowerCase();
+  if(!b.matches('[data-close],.close,.close-btn,[aria-label="Close"]')&&!/^close$/.test(label))return;
+  const overlay=b.closest('.modal,.modalbox,.sh61-modal,.sh55-modal,[role="dialog"],#sh56VaultModal');
+  if(!overlay)return;
+  overlay.classList.add('sh63-closing');
+  const p=overlay.querySelector('.modalbox,.sh61-panel,.sh58-panel,section,[role="document"]');if(p)p.classList.add('sh63-closing');
+ },true);
+ // Keyboard-first quick navigation and a tiny shortcut reference.
+ function showToast(text){
+  const old=document.querySelector('.sh63-toast');old?.remove();
+  const t=document.createElement('div');t.className='sh63-toast';t.textContent=text;document.body.appendChild(t);
+  setTimeout(()=>{t.classList.add('sh63-closing');setTimeout(()=>t.remove(),190)},2100);
  }
- function addSavedTools(){
-  const toolbar=$('#sh53Toolbar .sh53-actions');if(!toolbar||$('#sh62SavedItems'))return;
-  const b=document.createElement('button');b.id='sh62SavedItems';b.className='btn small';b.innerHTML=svg('bookmark')+' Saved items';toolbar.appendChild(b);
+ const search=$('#search')||$('input[placeholder*="Search scripts"]');
+ document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();( $('#search')||$('input[placeholder*="Search scripts"]'))?.focus();return}
+  if(e.key==='Escape'){const open=document.querySelector('.sh61-modal,.sh58-panel')?.closest('.sh61-modal')||document.querySelector('.sh61-modal');if(open){open.classList.add('sh63-closing');setTimeout(()=>open.remove(),160)}}
+ });
+ // Quick actions panel uses existing functions and doesn't duplicate the saved playlist.
+ const toolbar=$('#sh53Toolbar .sh53-actions');
+ if(toolbar&&!$('#sh63QuickTools')){
+  const b=document.createElement('button');b.id='sh63QuickTools';b.className='btn small';b.textContent='Quick tools';toolbar.appendChild(b);
   b.onclick=()=>{
-   const savedScripts=read(scriptKey(),[]),savedFolders=read(folderKey(),[]);
-   const scriptList=savedScripts.map(id=>(window.scripts||[]).find(s=>String(s.id)===String(id))).filter(Boolean);
-   const folderList=(window.shFolders||[]).filter(f=>savedFolders.some(id=>String(id)===String(f.id)));
-   const overlay=document.createElement('div');overlay.className='sh61-modal';overlay.style.zIndex='10080';overlay.innerHTML='<section class="sh61-panel"><header style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div><div class="sh61-muted">YOUR LIBRARY</div><h2 style="margin:6px 0">Saved items</h2></div><button class="btn small" data-close>Close</button></header><p class="sh61-muted">Your personal bookmarks on this device.</p><h3>Scripts</h3><div class="sh61-list">'+(scriptList.map(s=>'<div class="sh61-item"><strong>'+String(s.title||'Untitled').replace(/[&<>"]/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[x]))+'</strong><button class="btn small" data-script="'+String(s.id)+'">Open</button></div>').join('')||'<p class="sh61-muted">No saved scripts yet. Tap the bookmark icon on a script card.</p>')+'</div><h3>Folders</h3><div class="sh61-list">'+(folderList.map(f=>'<div class="sh61-item"><strong>'+String(f.name||'Untitled folder').replace(/[&<>"]/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[x]))+'</strong><button class="btn small" data-folder-open="'+String(f.id)+'">Open folder</button></div>').join('')||'<p class="sh61-muted">No saved folders yet. Bookmark a folder from Your folders.</p>')+'</div></section>';
-   document.body.appendChild(overlay);overlay.addEventListener('click',e=>{if(e.target===overlay||e.target.closest('[data-close]'))overlay.remove();const s=e.target.closest('[data-script]');if(s){if(typeof window.showScript==='function')window.showScript(s.dataset.script);overlay.remove()}const f=e.target.closest('[data-folder-open]');if(f){window.shFolderFilter=f.dataset.folderOpen;if(typeof window.shLoad==='function')window.shLoad();overlay.remove()}});
+   const overlay=document.createElement('div');overlay.className='sh61-modal sh63-overlay';overlay.style.zIndex='10090';
+   overlay.innerHTML='<section class="sh61-panel sh63-animate"><header style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div><div class="sh61-muted">WORKSPACE</div><h2 style="margin:6px 0">Quick tools</h2></div><button class="btn small" data-close>Close</button></header><div class="sh63-shortcuts"><kbd>Ctrl / ⌘ + K</kbd><span>Focus script search</span><kbd>Esc</kbd><span>Close a popup</span><kbd>/</kbd><span>Focus search when not typing</span></div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:18px"><button class="btn" data-tool="new">Create script</button><button class="btn" data-tool="challenge">Creator challenge</button><button class="btn" data-tool="snippets">Snippet vault</button><button class="btn" data-tool="notes">Creator notes</button><button class="btn" data-tool="health">Code health</button></div></section>';
+   document.body.appendChild(overlay);
+   overlay.addEventListener('click',e=>{
+    if(e.target===overlay||e.target.closest('[data-close]')){overlay.classList.add('sh63-closing');setTimeout(()=>overlay.remove(),160);return}
+    const tool=e.target.closest('[data-tool]')?.dataset.tool;if(!tool)return;overlay.remove();
+    if(tool==='new')$('#createScript')?.click()||$('#createBtn')?.click();
+    if(tool==='challenge')$('#sh54Challenge')?.click();
+    if(tool==='snippets')$('#sh56Snippets')?.click();
+    if(tool==='notes')$('#sh61Notes')?.click();
+    if(tool==='health')$('#sh61Health')?.click();
+   });
   };
  }
- document.addEventListener('click',e=>{if(e.target.closest('[data-sh62-script-bookmark],[data-sh62-folder-bookmark]'))return;},true);
- decorateScripts();decorateFolders();addSavedTools();
- const grid=$('#scriptGrid');if(grid)new MutationObserver(()=>decorateScripts()).observe(grid,{childList:true,subtree:true});
- const folders=$('#folderList');if(folders)new MutationObserver(()=>decorateFolders()).observe(folders,{childList:true,subtree:true});
- document.querySelector('#folderWorkspace')?.addEventListener('click',()=>setTimeout(decorateFolders,0));
- document.querySelector('#scriptGrid')?.addEventListener('click',()=>setTimeout(decorateScripts,0));
+ // Slash-to-search, but never steal keystrokes from inputs/editors.
+ document.addEventListener('keydown',e=>{
+  if(e.key!=='/'||e.ctrlKey||e.metaKey||e.altKey)return;
+  const t=e.target;if(t?.matches('input,textarea,[contenteditable="true"]')||t?.closest('.CodeMirror'))return;
+  const s=$('#search');if(s){e.preventDefault();s.focus()}
+ });
+ // Subtle toast on copy buttons, with no interference in clipboard behavior.
+ document.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  const txt=(b.textContent||'').trim().toLowerCase();
+  if(txt==='copy code'||txt==='copy')setTimeout(()=>showToast('Copy action requested.'),0);
+ },true);
 })();
 </script>
 
