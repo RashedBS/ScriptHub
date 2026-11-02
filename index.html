@@ -2560,4 +2560,75 @@ document.head.appendChild(sh53);
 })();
 </script>
 
+
+<script>
+/* ScriptHub 5.9 — show the source even without CodeMirror and restore compact mobile layout */
+(function(){
+ const style=document.createElement('style');
+ style.textContent=`
+ #sh56VaultModal #sh56Code{display:block!important;width:100%;min-height:220px;max-height:44dvh;box-sizing:border-box;resize:vertical;padding:14px;background:#020508;color:#d7e4f6;border:0;outline:none;font:12px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre;overflow:auto}
+ #sh56VaultModal .sh57-code-wrap textarea#sh56Code{border-radius:0}
+ #sh56VaultModal .sh57-code-wrap:has(.CodeMirror) textarea#sh56Code{display:none!important}
+ #sh56VaultModal .CodeMirror{width:100%;min-height:220px;max-height:44dvh;height:auto!important}
+ #sh56VaultModal .CodeMirror-scroll{min-height:220px;max-height:44dvh}
+ @media(max-width:700px){
+  main{width:calc(100% - 28px)!important;padding-top:12px!important}
+  #scriptGrid{grid-template-columns:minmax(0,1fr)!important;gap:12px!important}
+  #sh56VaultModal{padding:10px!important}
+  #sh56VaultModal>section{width:100%!important;max-height:86dvh!important;border-radius:14px!important}
+  #sh56VaultModal>section>div:first-child{padding:14px!important;gap:8px!important}
+  #sh56VaultModal>section>div:nth-child(2){display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:12px!important;padding:12px!important}
+  #sh56VaultModal #sh56List{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important}
+  #sh56VaultModal #sh56List button{min-width:0;min-height:40px!important;font-size:11px!important;overflow-wrap:anywhere}
+  #sh56VaultModal .CodeMirror,#sh56VaultModal .CodeMirror-scroll{min-height:170px;max-height:32dvh}
+  #sh56VaultModal #sh56Code{min-height:170px;max-height:32dvh}
+  .sh58-metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .sh58-panel{width:100%;padding:16px!important}
+ }
+ @media(min-width:701px) and (max-width:1050px){main{width:calc(100% - 36px)!important}#scriptGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+ `;
+ document.head.appendChild(style);
+ const modal=document.getElementById('sh56VaultModal');if(!modal)return;
+ const deck=()=>Array.isArray(window.sh57Deck)?window.sh57Deck:[];
+ function applySnippet(i){
+  const s=deck()[i];if(!s)return;
+  modal.querySelector('#sh56Name').textContent=s.name;
+  modal.querySelector('#sh56Desc').textContent=s.desc;
+  modal.querySelector('#sh56Cat').textContent=s.cat;
+  const ta=modal.querySelector('textarea#sh56Code');
+  if(window.sh57Preview&&typeof window.sh57Preview.setValue==='function'){
+   window.sh57Preview.setValue(s.code);window.sh57Preview.refresh();
+  }else if(ta){ta.value=s.code;ta.textContent=s.code;ta.style.display='block';}
+  const count=s.code.split('\n').length,counter=modal.querySelector('#sh57LineCount');
+  if(counter)counter.textContent=count+' lines';
+  modal.querySelectorAll('[data-snippet]').forEach(b=>{const active=Number(b.dataset.snippet)===i;b.style.borderColor=active?'#8aa9d1':'#263447';b.style.background=active?'#142033':'#080d14'});
+  window.sh58ActiveSnippet=s;
+ }
+ modal.querySelector('#sh56List')?.addEventListener('click',e=>{
+  const b=e.target.closest('[data-snippet]');if(b)setTimeout(()=>applySnippet(Number(b.dataset.snippet)),0);
+ });
+ // Keep line count correct when the visible plain-text fallback is edited.
+ const ta=modal.querySelector('textarea#sh56Code');
+ ta?.addEventListener('input',()=>{const counter=modal.querySelector('#sh57LineCount');if(counter)counter.textContent=ta.value.split('\n').length+' lines'});
+ const copy=modal.querySelector('#sh56Copy');
+ if(copy)copy.onclick=async()=>{
+  const value=window.sh57Preview?.getValue?.()??ta?.value??window.sh58ActiveSnippet?.code??'';
+  try{await navigator.clipboard.writeText(value);if(typeof toast==='function')toast('Snippet copied to clipboard.')}
+  catch(_){if(ta){ta.value=value;ta.style.display='block';ta.focus();ta.select();document.execCommand('copy');if(typeof toast==='function')toast('Snippet copied to clipboard.')} }
+ };
+ const insert=modal.querySelector('#sh56Insert');
+ if(insert)insert.onclick=()=>{
+  const value=window.sh57Preview?.getValue?.()??ta?.value??window.sh58ActiveSnippet?.code??'';
+  if(!value.trim()){if(typeof toast==='function')toast('Choose a snippet first.');return}
+  if(!window.user){if(typeof toast==='function')toast('Sign in before opening the editor.');return}
+  if(document.getElementById('editModal')?.classList.contains('show')&&window.editor){window.editor.replaceSelection(value);window.editor.focus()}
+  else if(typeof window.openEditor==='function'){
+   window.openEditor();
+   setTimeout(()=>{if(window.editor){window.editor.setValue(value);window.editor.focus();window.editor.setCursor(window.editor.lineCount(),0)}else{const input=document.getElementById('codeInput');if(input)input.value=value}},120);
+  }
+  modal.style.opacity='0';setTimeout(()=>modal.style.display='none',210);
+ };
+})();
+</script>
+
 </body></html>
