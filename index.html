@@ -2721,39 +2721,17 @@ document.head.appendChild(sh53);
   m.innerHTML='<section class="sh61-panel"><header style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div><div style="font-size:10px;letter-spacing:.14em;color:#91a5bf">CREATOR TOOLS</div><h2 style="margin:6px 0;font-size:24px">'+title+'</h2></div><button class="btn small" data-close>Close</button></header>'+body+'</section>';
   document.body.appendChild(m);m.addEventListener('click',e=>{if(e.target===m||e.target.closest('[data-close]'))m.remove()});return m;
  }
- const key=()=> 'sh61_bookmarks_'+uid(), notesKey=()=> 'sh61_notes_'+uid();
+ const notesKey=()=> 'sh61_notes_'+uid();
  function allScripts(){return Array.isArray(window.scripts)?window.scripts:[]}
  function openOne(id){if(typeof window.showScript==='function')window.showScript(id)}
  const actions=$('#sh53Toolbar .sh53-actions');
  if(actions&&!$('#sh61Tools')){
   const b=document.createElement('button');b.id='sh61Tools';b.className='btn small';b.textContent='Creator toolbox';actions.appendChild(b);
   b.onclick=()=>{
-   const m=modal('Creator toolbox','<p class="sh61-muted">Quick access to saved scripts, a Lua code health check, and private notes.</p><div class="sh61-actions"><button class="btn" data-tool="bookmarks">Saved scripts</button><button class="btn" data-tool="check">Code health check</button><button class="btn" data-tool="notes">Creator notes</button></div><div class="sh61-result"><strong>Tip</strong><p class="sh61-muted">Saved scripts and notes are stored in this browser. They are not public and do not sync across devices.</p></div>','sh61Home');
-   m.addEventListener('click',e=>{const x=e.target.closest('[data-tool]');if(!x)return;if(x.dataset.tool==='bookmarks')bookmarks();if(x.dataset.tool==='check')checker();if(x.dataset.tool==='notes')notes()});
+   const m=modal('Creator toolbox','<p class="sh61-muted">Quick access to saved scripts, a Lua code health check, and private notes.</p><div class="sh61-actions"><button class="btn" data-tool="check">Code health check</button><button class="btn" data-tool="notes">Creator notes</button></div><div class="sh61-result"><strong>Tip</strong><p class="sh61-muted">Saved scripts and notes are stored in this browser. They are not public and do not sync across devices.</p></div>','sh61Home');
+   m.addEventListener('click',e=>{const x=e.target.closest('[data-tool]');if(!x)return;if(x.dataset.tool==='check')checker();if(x.dataset.tool==='notes')notes()});
   };
  }
- function bookmarks(){
-  const ids=read(key(),[]),all=allScripts(),saved=ids.map(id=>all.find(s=>String(s.id)===String(id))).filter(Boolean);
-  const m=modal('Saved scripts','<p class="sh61-muted">Bookmark useful scripts so you can find them quickly later.</p><input id="sh61Find" placeholder="Filter saved scripts..."><div class="sh61-list" id="sh61SavedList"></div><p class="sh61-muted" id="sh61SavedCount"></p>','sh61Bookmarks');
-  const render=()=>{const q=$('#sh61Find').value.toLowerCase(),list=saved.filter(s=>String(s.title||'').toLowerCase().includes(q)||String(s.description||'').toLowerCase().includes(q));$('#sh61SavedList').innerHTML=list.map(s=>'<div class="sh61-item"><div><strong>'+esc(s.title||'Untitled script')+'</strong><div class="sh61-muted">'+esc(s.type||'Script')+' · '+String(s.code||'').split('\n').length+' lines</div></div><div class="sh61-actions"><button class="btn small" data-open="'+esc(s.id)+'">Open</button><button class="btn small" data-remove="'+esc(s.id)+'">Remove</button></div></div>').join('')||'<p class="sh61-muted">No saved scripts yet. Use the bookmark button on a script card.</p>';$('#sh61SavedCount').textContent=list.length+' saved scripts'};
-  $('#sh61Find').addEventListener('input',render);
-  m.addEventListener('click',e=>{const o=e.target.closest('[data-open]');if(o){openOne(o.dataset.open);m.remove()}const r=e.target.closest('[data-remove]');if(r){write(key(),read(key(),[]).filter(id=>String(id)!==r.dataset.remove));r.closest('.sh61-item').remove();}});
-  render();
- }
- // Add bookmark controls to script cards without modifying the site's card renderer.
- function decorateCards(){
-  const ids=read(key(),[]);
-  document.querySelectorAll('#scriptGrid [data-open]').forEach(cardButton=>{
-   const card=cardButton.closest('.card')||cardButton.parentElement;
-   const id=cardButton.getAttribute('data-open');if(!card||!id||card.querySelector('[data-sh61-bookmark]'))return;
-   const b=document.createElement('button');b.type='button';b.className='btn small';b.dataset.sh61Bookmark=id;b.textContent=ids.some(x=>String(x)===String(id))?'Saved':'Save script';b.style.cssText='margin:8px 0;max-width:100%';
-   b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();const saved=read(key(),[]),idx=saved.findIndex(x=>String(x)===String(id));if(idx>=0)saved.splice(idx,1);else saved.unshift(id);write(key(),saved);b.textContent=idx>=0?'Save script':'Saved';if(typeof toast==='function')toast(idx>=0?'Removed from saved scripts.':'Script bookmarked.')});
-   card.appendChild(b);
-  });
- }
- decorateCards();
- const grid=$('#scriptGrid');
- if(grid)new MutationObserver(()=>decorateCards()).observe(grid,{childList:true,subtree:true});
  function currentCode(){return window.editor?.getValue?.()??$('#codeInput')?.value??''}
  function checker(){
   const code=currentCode(),lines=code.split('\n'),issues=[];
