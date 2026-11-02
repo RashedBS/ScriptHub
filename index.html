@@ -2205,4 +2205,53 @@ shSound=function(type="tap"){if(!shSoundEnabled)return;try{const A=window.AudioC
 (function(){const main=document.querySelector("main");if(!main||document.getElementById("sh52QuickActions"))return;const b=document.createElement("div");b.id="sh52QuickActions";b.className="sh52-quick";b.innerHTML='<button class="btn primary small" id="sh52Create"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Create script</button><button class="btn small" id="sh52Discover"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>Discover scripts</button><button class="btn small" id="sh52My"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>My workspace</button>';main.insertBefore(b,main.firstChild);document.getElementById("sh52Create").onclick=()=>{if(typeof openEditor==="function")openEditor();else document.getElementById("addFolderBtn")?.click()};document.getElementById("sh52Discover").onclick=()=>document.querySelector('.navbtn[data-view="discover"]')?.click();document.getElementById("sh52My").onclick=()=>document.querySelector('.navbtn[data-view="mine"]')?.click()})();
 
 </script>
+<script>
+
+/* ScriptHub 5.3 — ultra-dark professional finish and practical creator tools */
+const sh53=document.createElement("style");
+sh53.textContent=`
+:root{color-scheme:dark;--bg:#020305;--panel:#06090e;--panel2:#090e15;--line:#151d28;--text:#e7edf5;--muted:#778599}
+html,body{background:#020305!important;color:#e7edf5!important;background-image:none!important}
+body:before{display:none!important}
+header,.topbar,.navbar,.header,.nav{background:#030508!important;border-color:#101721!important;box-shadow:0 1px 0 #ffffff03!important}
+.card,.script,.folder-chip,.modalbox,.side,.panel,.workspace,.folder-workspace{background:#06090e!important;border:1px solid #151e2a!important;box-shadow:0 5px 18px #0007!important}
+.card:hover,.script:hover,.folder-chip:hover{background:#090e15!important;border-color:#263448!important;box-shadow:0 10px 24px #0009!important}
+#scriptGrid .card{border-radius:10px!important;padding:17px!important}
+#scriptGrid .card h3{font-size:17px!important;font-weight:650!important;letter-spacing:-.025em!important}
+h1,h2,h3{color:#edf2fa!important;letter-spacing:-.035em!important}
+p,.note,.meta,.muted{color:#8491a3!important}
+button,.btn,.navbtn,.tab{border-radius:8px!important;box-shadow:none!important;transition:background .16s ease,border-color .16s ease,color .16s ease,transform .16s ease!important}
+.btn.primary,button.primary{background:#cbd6e5!important;color:#080d14!important;border:1px solid #cbd6e5!important}
+.btn.primary:hover,button.primary:hover{background:#e6edf7!important}
+.btn:not(.primary),.social-btn,.navbtn,.tab{background:#080d14!important;color:#bbc7d7!important;border:1px solid #1b2736!important}
+.btn:not(.primary):hover,.social-btn:hover,.navbtn:hover,.tab:hover{background:#101925!important;border-color:#304158!important}
+input,textarea,select{background:#030609!important;color:#e6edf7!important;border-color:#1a2533!important;box-shadow:none!important}
+input:focus,textarea:focus,select:focus{border-color:#637894!important;box-shadow:0 0 0 3px #7185a012!important}
+.modal.show{background:#000f!important;backdrop-filter:blur(9px)!important}
+.modalbox{background:#06090e!important;border-color:#202c3b!important;box-shadow:0 28px 90px #000e!important}
+.pill{background:#090f17!important;color:#aebdd0!important;border-color:#1b2939!important}
+#folderList .folder-chip{padding:15px!important;border-radius:10px!important}
+.sh53-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 16px;padding:13px 14px;background:#05080d;border:1px solid #151e29;border-radius:11px}
+.sh53-toolbar .sh53-label{font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:#738198}
+.sh53-toolbar .sh53-actions{display:flex;gap:7px;flex-wrap:wrap}
+.sh53-toolbar button{display:inline-flex;align-items:center;gap:7px}
+.sh53-toolbar svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sh53-focus{outline:2px solid #7892b4!important;outline-offset:2px}
+.sh53-top{position:sticky;top:8px;z-index:5}
+@media(max-width:640px){#scriptGrid{grid-template-columns:1fr!important}#scriptGrid .card{padding:14px!important}.sh53-toolbar{align-items:flex-start}.sh53-toolbar .sh53-actions{width:100%}.sh53-toolbar button{flex:1;justify-content:center}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important}}
+`;
+document.head.appendChild(sh53);
+(function(){
+ const main=document.querySelector("main");if(!main||document.getElementById("sh53Toolbar"))return;
+ const bar=document.createElement("section");bar.id="sh53Toolbar";bar.className="sh53-toolbar";
+ bar.innerHTML='<div><div class="sh53-label">Creator workspace</div><div style="font-size:14px;font-weight:650;margin-top:4px">Build something useful.</div></div><div class="sh53-actions"><button class="btn small" id="sh53Top"><svg viewBox="0 0 24 24"><path d="M12 19V5m-7 7 7-7 7 7"/></svg>Back to top</button><button class="btn small" id="sh53Search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>Search</button><button class="btn small" id="sh53Shortcuts"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h2m3 0h2m3 0h.01M7 13h.01m3 0h.01m3 0h.01m3 0h.01M9 17h6"/></svg>Shortcuts</button></div>';
+ main.insertBefore(bar,main.firstChild);
+ document.getElementById("sh53Top").onclick=()=>window.scrollTo({top:0,behavior:"smooth"});
+ document.getElementById("sh53Search").onclick=()=>{const input=document.querySelector('#searchInput,input[type="search"],input[placeholder*="Search"],input[placeholder*="search"]');if(input){input.focus();input.scrollIntoView({behavior:"smooth",block:"center"})}else toast("Use the Discover tab to search scripts.")};
+ document.getElementById("sh53Shortcuts").onclick=()=>{const existing=document.getElementById("sh53ShortcutModal");if(existing){existing.remove();return}const modal=document.createElement("div");modal.id="sh53ShortcutModal";modal.style.cssText="position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:#000d;backdrop-filter:blur(8px);padding:18px;opacity:0;transition:opacity .2s";modal.innerHTML='<div style="width:min(420px,100%);background:#06090e;border:1px solid #263447;border-radius:14px;padding:20px;transform:translateY(8px);transition:transform .2s"><div style="display:flex;justify-content:space-between;align-items:center"><strong>Keyboard shortcuts</strong><button class="btn small" id="sh53Close">Close</button></div><p style="margin-top:14px">Quick ways to move around ScriptHub.</p><div style="display:grid;grid-template-columns:1fr auto;gap:12px;padding:12px 0;border-bottom:1px solid #17212d"><span>Focus search</span><kbd>/</kbd><span>Back to top</span><kbd>G then T</kbd><span>Close dialogs</span><kbd>Esc</kbd></div><p style="font-size:12px;color:#78879a;margin-bottom:0">Shortcuts are shown as a guide; browser-reserved keys may behave differently.</p></div>';document.body.appendChild(modal);requestAnimationFrame(()=>{modal.style.opacity="1";modal.firstElementChild.style.transform="translateY(0)"});const close=()=>{modal.style.opacity="0";modal.firstElementChild.style.transform="translateY(8px)";setTimeout(()=>modal.remove(),210)};document.getElementById("sh53Close").onclick=close;modal.addEventListener("click",e=>{if(e.target===modal)close()})};
+ document.addEventListener("keydown",e=>{if(e.key==="Escape")document.getElementById("sh53ShortcutModal")?.remove();if(e.key==="/"&&!/input|textarea/i.test(document.activeElement?.tagName||"")){e.preventDefault();document.getElementById("sh53Search").click()}});
+})();
+
+</script>
 </body></html>
