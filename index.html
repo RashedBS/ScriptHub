@@ -3238,15 +3238,13 @@ document.head.appendChild(sh53);
 })();
 </script>
 
-</body></html>
-<!-- ScriptHub emergency visual fixes 7.0 -->
 <style id="sh70VisualFixes">
 /* Action buttons: target the actual buttons used in cards and folder rows. */
-button[data-edit],button[data-folder-edit],button[data-edit-script],button.edit-btn{
+main button[data-edit],main button[data-folder-edit],main button[data-edit-script],main button.edit-btn, .folder-script-row button[data-folder-edit]{
  background:#101d35!important;border:1px solid #294d80!important;color:#a9c9ff!important;
 }
 button[data-edit] svg,button[data-folder-edit] svg,button[data-edit-script] svg,button.edit-btn svg{color:inherit!important}
-button[data-delete],button[data-folder-delete],button[data-folder-script-delete],button.delete-btn,button[data-delete-script]{
+main button[data-delete],main button[data-folder-delete],main button[data-folder-script-delete],main button.delete-btn, .folder-script-row button[data-folder-script-delete]{
  background:#35131b!important;border:1px solid #873344!important;color:#ff8795!important;
 }
 button[data-copy],button.copy-btn,.sh65-copy{
@@ -3278,6 +3276,12 @@ button[data-copy],button.copy-btn,.sh65-copy{
 }
 #folderList .folder-chevron{transition:transform .28s cubic-bezier(.2,.75,.25,1)!important}
 #folderList .folder-accordion.open .folder-chevron{transform:rotate(90deg)!important}
+/* Also animate the public collection accordions and any collapsible list panels. */
+#folderList .folder-accordion .folder-contents{display:grid!important}
+#folderList .folder-accordion:not(.open) .folder-contents{max-height:0!important}
+#folderList .folder-accordion.open .folder-contents{max-height:1200px!important}
+.public-collection-content,.collection-content,.public-folder-content{overflow:hidden;max-height:0;opacity:0;transform:translateY(-5px);transition:max-height .38s ease,opacity .22s ease,transform .28s ease}
+.public-collection.open .public-collection-content,.collection.open .collection-content,.public-folder.open .public-folder-content{max-height:1600px;opacity:1;transform:translateY(0)}
 /* Desktop alignment and safe mobile widths. */
 @media(min-width:900px){
  #folderWorkspace,#folderWorkspace+*,#sh53Toolbar{max-width:1180px;margin-left:auto;margin-right:auto}
@@ -3289,3 +3293,5 @@ button[data-copy],button.copy-btn,.sh65-copy{
  #sh54ChallengeModal #sh54Close{top:10px!important;right:10px!important}
 }
 </style>
+</body></html>
+
