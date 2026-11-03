@@ -3084,4 +3084,99 @@ document.head.appendChild(sh53);
 })();
 </script>
 
+
+<script>
+/* ScriptHub 6.8 — target the actual rendered folder list and challenge card */
+(function(){
+ const css=document.createElement('style');
+ css.textContent=`
+ /* Challenge modal uses a direct section panel; anchor Close to that panel's top-right. */
+ #sh54ChallengeModal>section{position:relative!important;padding-top:62px!important}
+ #sh54ChallengeModal #sh54Close{position:absolute!important;top:14px!important;right:14px!important;left:auto!important;bottom:auto!important;margin:0!important;z-index:100!important}
+ /* Correct live folder-list selector (#folderList, not #folderWorkspace). */
+ #folderList .folder-contents{display:grid!important;grid-template-rows:0fr;gap:0!important;height:0;max-height:0;overflow:hidden;opacity:0;transform:translateY(-5px);padding:0 10px!important;transition:max-height .34s ease,opacity .24s ease,transform .3s ease,padding .3s ease!important}
+ #folderList .folder-accordion.open .folder-contents{grid-template-rows:1fr;max-height:1200px;height:auto;gap:7px!important;opacity:1;transform:translateY(0);padding:0 10px 10px!important}
+ #folderList .folder-chevron{display:inline-block;transition:transform .28s ease!important}
+ #folderList .folder-accordion.open .folder-chevron{transform:rotate(90deg)}
+ #folderList .folder-accordion{transition:border-color .22s ease,background .22s ease}
+ .sh68-action{display:inline-flex!important;align-items:center;justify-content:center;gap:7px}
+ .sh68-action svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+ .sh68-delete{background:#35131b!important;border:1px solid #873344!important;color:#ff8795!important}
+ .sh68-edit{background:#101d35!important;border:1px solid #294d80!important;color:#91baff!important}
+ .sh68-close{background:#35151b!important;border:1px solid #88404b!important;color:#ff9ba6!important}
+ .sh68-copy{background:#102a2a!important;border:1px solid #28635f!important;color:#8be0d4!important}
+ @media(prefers-reduced-motion:reduce){#folderList .folder-contents,#folderList .folder-chevron{transition:none!important}}
+ `;
+ document.head.appendChild(css);
+ const paths={
+  delete:'<path d="M3 6h18M8 6V4h8v2m-11 0 1 14h12l1-14M10 10v6m4-6v6"/>',
+  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/>',
+  close:'<path d="m18 6-12 12M6 6l12 12"/>',
+  copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>'
+ };
+ const icon=k=>'<svg viewBox="0 0 24 24" aria-hidden="true">'+paths[k]+'</svg>';
+ function styleActions(root=document){
+  root.querySelectorAll('button').forEach(b=>{
+   if(b.dataset.sh68Iconized)return;
+   const t=(b.getAttribute('aria-label')||b.title||b.textContent||'').trim().toLowerCase().replace(/\s+/g,' ');
+   const k=/^(delete|delete folder|delete script|remove)$/.test(t)?'delete':/^(edit|edit script)$/.test(t)?'edit':/^(close|cancel)$/.test(t)?'close':/^(copy|copy code)$/.test(t)?'copy':'';
+   if(!k)return;
+   b.classList.add('sh68-action','sh68-'+k);b.dataset.sh68Iconized='1';
+   // Keep meaningful text on destructive/edit actions; icon-only for Close and Copy.
+   if(k==='close'||k==='copy'){b.innerHTML=icon(k);b.setAttribute('aria-label',t);b.title=t}
+   else b.insertAdjacentHTML('afterbegin',icon(k));
+  });
+ }
+ function fixChallenge(){
+  const m=document.getElementById('sh54ChallengeModal');if(!m)return;
+  const panel=m.querySelector(':scope > section'),b=m.querySelector('#sh54Close');if(!panel||!b)return;
+  panel.style.setProperty('position','relative','important');panel.style.setProperty('padding-top','62px','important');
+  Object.entries({position:'absolute',top:'14px',right:'14px',left:'auto',bottom:'auto',margin:'0',zIndex:'100'}).forEach(([k,v])=>b.style.setProperty(k.replace(/[A-Z]/g,x=>'-'+x.toLowerCase()),v,'important'));
+  b.classList.add('sh68-action','sh68-close');
+  if(!b.dataset.sh68Iconized){b.dataset.sh68Iconized='1';b.innerHTML=icon('close');b.setAttribute('aria-label','Close');b.title='Close'}
+ }
+ // Override the real click handler at the actual rendered list.
+ document.addEventListener('click',async e=>{
+  const view=e.target.closest('#folderList [data-folder-view]');if(view){
+   e.preventDefault();e.stopImmediatePropagation();
+   const id=view.dataset.folderView;
+   try{
+    let s=(typeof scripts!=='undefined'&&Array.isArray(scripts))?scripts.find(x=>String(x.id)===String(id)):null;
+    if(!s){
+     if(typeof db==='undefined'||!db){if(typeof toast==='function')toast('Database is still loading.');return}
+     const r=await db.from('scripts').select('*').eq('id',id).maybeSingle();
+     if(r.error||!r.data){if(typeof toast==='function')toast('Could not load script: '+(r.error?.message||'not found'));return}
+     s=r.data;if(typeof scripts!=='undefined'&&Array.isArray(scripts))scripts.push(s);
+    }
+    const title=document.getElementById('viewTitle'),desc=document.getElementById('viewDescription'),meta=document.getElementById('viewMeta'),code=document.getElementById('viewCode');
+    if(!title||!desc||!meta||!code){if(typeof toast==='function')toast('Script viewer is unavailable.');return}
+    title.textContent=s.title||'Untitled script';desc.textContent=s.description||'No description provided.';
+    meta.textContent=(s.script_type||'Script')+' · '+(s.visibility==='public'?'Public':'Private');code.textContent=s.code||'-- No code saved for this script yet.';
+    const vm=document.getElementById('viewModal');if(vm){if(typeof modal==='function')modal('viewModal');else vm.classList.add('show')}
+   }catch(err){console.error(err);if(typeof toast==='function')toast('Unable to open script code.')}
+   return;
+  }
+  const toggle=e.target.closest('#folderList [data-folder-toggle]');if(!toggle)return;
+  e.preventDefault();e.stopImmediatePropagation();
+  const card=toggle.closest('.folder-accordion'),body=card?.querySelector('.folder-contents');if(!card||!body)return;
+  const id=toggle.dataset.folderToggle,opening=!card.classList.contains('open');
+  if(typeof shExpandedFolders!=='undefined'){if(opening)shExpandedFolders.add(id);else shExpandedFolders.delete(id)}
+  card.classList.toggle('open',opening);toggle.setAttribute('aria-expanded',String(opening));
+  if(opening){body.style.maxHeight='0px';body.style.opacity='0';requestAnimationFrame(()=>{body.style.maxHeight='1200px';body.style.opacity='1'})}
+  else{body.style.maxHeight=body.scrollHeight+'px';body.style.opacity='1';requestAnimationFrame(()=>{body.style.maxHeight='0px';body.style.opacity='0'})}
+ },true);
+ const mo=new MutationObserver(()=>{styleActions(document.getElementById('folderList')||document);fixChallenge()});
+ mo.observe(document.body,{childList:true,subtree:true});
+ styleActions();fixChallenge();
+ // Add a louder second layer to existing button sounds.
+ let ac;
+ document.addEventListener('pointerdown',e=>{
+  if(!e.target.closest('button,.btn,.tab,.navbtn,.social-btn'))return;
+  try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;ac=ac||new C();if(ac.state==='suspended')ac.resume();
+   const n=ac.currentTime,o=ac.createOscillator(),g=ac.createGain();o.type='triangle';o.frequency.setValueAtTime(560,n);o.frequency.exponentialRampToValueAtTime(360,n+.09);g.gain.setValueAtTime(.0001,n);g.gain.exponentialRampToValueAtTime(.14,n+.01);g.gain.exponentialRampToValueAtTime(.0001,n+.12);o.connect(g);g.connect(ac.destination);o.start(n);o.stop(n+.13);
+  }catch(_){}
+ },{passive:true});
+})();
+</script>
+
 </body></html>
