@@ -3179,4 +3179,56 @@ document.head.appendChild(sh53);
 })();
 </script>
 
+
+<script>
+/* ScriptHub 6.9 — undo duplicate icon injection and restore readable action buttons */
+(function(){
+ const css=document.createElement('style');
+ css.textContent=`
+ button.sh65-edit,button.sh68-edit,button.sh67-edit,
+ button[data-folder-edit],button[data-edit]{background:#101d35!important;border:1px solid #294d80!important;color:#a9c9ff!important}
+ button.sh65-delete,button.sh68-delete,button.sh67-delete,
+ button.delete-btn,button[data-folder-delete],button[data-folder-script-delete],button[data-delete]{background:#35131b!important;border:1px solid #873344!important;color:#ff8795!important}
+ button.sh65-close,button.sh68-close,button.sh67-close,#sh54Close{background:#35151b!important;border:1px solid #88404b!important;color:#ff9ba6!important}
+ button.sh65-copy,button.sh68-copy,button.sh67-copy{background:#102a2a!important;border:1px solid #28635f!important;color:#8be0d4!important}
+ .sh69-action{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;white-space:nowrap!important}
+ .sh69-action svg{display:block!important;width:17px!important;height:17px!important;flex:0 0 17px!important;fill:none!important;stroke:currentColor!important;stroke-width:1.8!important;stroke-linecap:round!important;stroke-linejoin:round!important}
+ #folderList .folder-script-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px!important}
+ #folderList .folder-script-row .folder-script-name{min-width:0;flex:1 1 130px}
+ #sh54ChallengeModal>section{position:relative!important;padding-top:62px!important}
+ #sh54ChallengeModal #sh54Close{position:absolute!important;top:14px!important;right:14px!important;left:auto!important;bottom:auto!important;margin:0!important;z-index:100!important}
+ `;
+ document.head.appendChild(css);
+ const paths={
+  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/>',
+  delete:'<path d="M3 6h18M8 6V4h8v2m-11 0 1 14h12l1-14M10 10v6m4-6v6"/>',
+  close:'<path d="m18 6-12 12M6 6l12 12"/>',
+  copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>'
+ };
+ const svg=k=>'<svg viewBox="0 0 24 24" aria-hidden="true">'+paths[k]+'</svg>';
+ function repair(){
+  document.querySelectorAll('button.sh65-edit,button.sh68-edit,button.sh67-edit,button[data-folder-edit],button[data-edit],button.sh65-delete,button.sh68-delete,button.sh67-delete,button.delete-btn,button[data-folder-delete],button[data-folder-script-delete],button[data-delete],button.sh65-copy,button.sh68-copy,button.sh67-copy,button.sh65-close,button.sh68-close,button.sh67-close,#sh54Close').forEach(b=>{
+   let kind=(b.matches('.sh65-edit,.sh68-edit,.sh67-edit,[data-folder-edit],[data-edit]'))?'edit':
+    (b.matches('.sh65-delete,.sh68-delete,.sh67-delete,.delete-btn,[data-folder-delete],[data-folder-script-delete],[data-delete]'))?'delete':
+    (b.matches('.sh65-copy,.sh68-copy,.sh67-copy'))?'copy':'close';
+   let label=b.getAttribute('aria-label')||b.title||({edit:'Edit',delete:'Delete',copy:'Copy code',close:'Close'}[kind]);
+   label=label.trim()||({edit:'Edit',delete:'Delete',copy:'Copy code',close:'Close'}[kind]);
+   // Replace, don't prepend: the previous patch inserted a second SVG and removed the visible label.
+   b.innerHTML=svg(kind)+'<span>'+label.replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</span>';
+   b.classList.add('sh69-action','sh65-icon-action','sh65-'+kind);
+   b.classList.remove('sh65-icon-only');
+   b.dataset.sh69Repaired='1';
+   if(kind==='close'){b.setAttribute('aria-label','Close');b.title='Close'}
+  });
+  const m=document.getElementById('sh54ChallengeModal'),panel=m?.querySelector(':scope > section'),close=m?.querySelector('#sh54Close');
+  if(panel&&close){
+   panel.style.setProperty('position','relative','important');panel.style.setProperty('padding-top','62px','important');
+   Object.entries({position:'absolute',top:'14px',right:'14px',left:'auto',bottom:'auto',margin:'0',zIndex:'100'}).forEach(([k,v])=>close.style.setProperty(k.replace(/[A-Z]/g,x=>'-'+x.toLowerCase()),v,'important'));
+  }
+ }
+ const mo=new MutationObserver(repair);mo.observe(document.body,{childList:true,subtree:true});
+ repair();
+})();
+</script>
+
 </body></html>
