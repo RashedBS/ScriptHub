@@ -2933,7 +2933,7 @@ document.head.appendChild(sh53);
   if(close){close.innerHTML=svg('close');close.classList.add('sh65-icon-action','sh65-close','sh65-icon-only');close.title='Close';close.setAttribute('aria-label','Close')}
  },true);
  const observer=new MutationObserver(()=>{iconify();animateFolders();});
- observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+ observer.observe(document.body,{childList:true,subtree:true});
  iconify();animateFolders();
  // The original folder editor only searches the currently loaded list. Fetch the chosen script directly.
  const oldShow=window.showScript;
@@ -2967,6 +2967,120 @@ document.head.appendChild(sh53);
  addViewButtons();
  // Iconify actions after labels are inserted by existing renderers.
  setTimeout(iconify,100);setTimeout(iconify,700);
+})();
+</script>
+
+
+<script>
+/* ScriptHub 6.7 — repair folder code access and polish modal controls */
+(function(){
+ const css=document.createElement('style');
+ css.textContent=`
+ #sh54ChallengeModal{overflow:auto!important}
+ #sh54ChallengeModal>section{position:relative!important;padding-top:58px!important}
+ #sh54ChallengeModal #sh54Close{position:absolute!important;top:12px!important;right:12px!important;left:auto!important;bottom:auto!important;z-index:50!important}
+ #folderWorkspace .folder-contents{display:block!important;height:0;overflow:hidden;opacity:0;transform:translateY(-5px);padding-top:0!important;padding-bottom:0!important;transition:height .32s cubic-bezier(.2,.75,.25,1),opacity .24s ease,transform .32s ease!important}
+ #folderWorkspace .folder-accordion.open .folder-contents{opacity:1;transform:translateY(0);padding-bottom:10px!important}
+ #folderWorkspace .folder-chevron{display:inline-block;transition:transform .28s ease!important}
+ #folderWorkspace .folder-accordion.open .folder-chevron{transform:rotate(90deg)}
+ #folderWorkspace .folder-accordion{transition:border-color .22s,background .22s}
+ .sh67-delete{background:#35131b!important;border:1px solid #873344!important;color:#ff8795!important}
+ .sh67-edit{background:#101d35!important;border:1px solid #294d80!important;color:#91baff!important}
+ .sh67-close{background:#35151b!important;border:1px solid #88404b!important;color:#ff9ba6!important}
+ .sh67-copy{background:#102a2a!important;border:1px solid #28635f!important;color:#8be0d4!important}
+ .sh67-action svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+ @media(prefers-reduced-motion:reduce){#folderWorkspace .folder-contents,#folderWorkspace .folder-chevron{transition:none!important}}
+ `;
+ document.head.appendChild(css);
+ const icons={
+  delete:'<path d="M3 6h18M8 6V4h8v2m-11 0 1 14h12l1-14M10 10v6m4-6v6"/>',
+  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/>',
+  close:'<path d="m18 6-12 12M6 6l12 12"/>',
+  copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>'
+ };
+ const svg=k=>'<svg viewBox="0 0 24 24" aria-hidden="true">'+icons[k]+'</svg>';
+ function decorate(){
+  document.querySelectorAll('button').forEach(b=>{
+   const text=(b.getAttribute('aria-label')||b.title||b.textContent||'').trim().toLowerCase().replace(/\s+/g,' ');
+   const kind=/^(delete|delete folder|delete script|remove)$/.test(text)?'delete':/^(edit|edit script)$/.test(text)?'edit':/^(close|cancel)$/.test(text)?'close':/^(copy|copy code)$/.test(text)?'copy':'';
+   if(!kind)return;
+   b.classList.add('sh67-action','sh67-'+kind);
+   if(b.dataset.sh67Iconized)return;
+   b.dataset.sh67Iconized='1';b.innerHTML=svg(kind);
+   b.title=text.replace(/^./,x=>x.toUpperCase());b.setAttribute('aria-label',b.title);
+  });
+ }
+ // Folder toggle: own the click so the old display:none implementation cannot race the animation.
+ document.addEventListener('click',e=>{
+  const toggle=e.target.closest('#folderWorkspace [data-folder-toggle]');if(!toggle)return;
+  const card=toggle.closest('.folder-accordion'),body=card?.querySelector('.folder-contents');if(!card||!body)return;
+  e.preventDefault();e.stopImmediatePropagation();
+  const opening=!card.classList.contains('open'),id=toggle.dataset.folderToggle;
+  if(opening){
+   card.classList.add('open');toggle.setAttribute('aria-expanded','true');
+   body.style.height='0px';body.style.opacity='0';
+   requestAnimationFrame(()=>{body.style.height=body.scrollHeight+'px';body.style.opacity='1'});
+   body.addEventListener('transitionend',function finish(ev){if(ev.propertyName==='height'&&card.classList.contains('open'))body.style.height='auto';if(ev.propertyName==='height')body.removeEventListener('transitionend',finish)});
+   if(typeof shExpandedFolders!=='undefined')shExpandedFolders.add(id);
+  }else{
+   body.style.height=body.scrollHeight+'px';body.style.opacity='1';
+   requestAnimationFrame(()=>{body.style.height='0px';body.style.opacity='0'});
+   card.classList.remove('open');toggle.setAttribute('aria-expanded','false');
+   if(typeof shExpandedFolders!=='undefined')shExpandedFolders.delete(id);
+  }
+ },true);
+ // The folder rows previously routed to Edit and only searched the in-memory list.
+ // Fetch the full record using the app's lexical Supabase client and show its code in View Script.
+ document.addEventListener('click',async e=>{
+  const b=e.target.closest('#folderWorkspace [data-folder-view]');if(!b)return;
+  e.preventDefault();e.stopImmediatePropagation();
+  const id=b.dataset.folderView;
+  try{
+   let s=(typeof scripts!=='undefined'&&Array.isArray(scripts))?scripts.find(x=>String(x.id)===String(id)):null;
+   if(!s){
+    if(typeof db==='undefined'||!db){toast('Database is still loading. Please try again.');return}
+    const result=await db.from('scripts').select('*').eq('id',id).maybeSingle();
+    if(result.error||!result.data){toast(result.error?.message||'Could not load this script.');return}
+    s=result.data;
+    if(typeof scripts!=='undefined'&&Array.isArray(scripts))scripts.push(s);
+   }
+   const title=document.getElementById('viewTitle'),desc=document.getElementById('viewDescription'),meta=document.getElementById('viewMeta'),code=document.getElementById('viewCode'),vm=document.getElementById('viewModal');
+   if(!title||!desc||!meta||!code||!vm){toast('Script viewer is unavailable. Refresh and try again.');return}
+   title.textContent=s.title||'Untitled script';
+   desc.textContent=s.description||'No description provided.';
+   meta.textContent=(s.script_type||'Script')+' · '+(s.visibility||'Private');
+   code.textContent=s.code||'-- This script is empty.';
+   vm.classList.add('show');
+   if(typeof shSound==='function')shSound('open');
+  }catch(err){console.error(err);if(typeof toast==='function')toast('Could not open this script. Try refreshing.')}
+ },true);
+ // Correct the actual close control on the random challenge modal.
+ function fixChallengeClose(){
+  const m=document.getElementById('sh54ChallengeModal');if(!m)return;
+  const close=m.querySelector('#sh54Close'),panel=m.firstElementChild;if(!close||!panel)return;
+  panel.style.position='relative';panel.style.paddingTop='58px';
+  close.style.setProperty('position','absolute','important');
+  close.style.setProperty('top','12px','important');close.style.setProperty('right','12px','important');
+  close.style.setProperty('left','auto','important');close.style.setProperty('bottom','auto','important');
+  close.classList.add('sh67-action','sh67-close');
+  if(!close.dataset.sh67Iconized){close.dataset.sh67Iconized='1';close.innerHTML=svg('close');close.setAttribute('aria-label','Close');close.title='Close'}
+ }
+ const observer=new MutationObserver(()=>{decorate();fixChallengeClose()});
+ observer.observe(document.body,{childList:true,subtree:true});
+ decorate();fixChallengeClose();
+ // Stronger click feedback layered over the site's existing sound, capped to avoid harsh volume.
+ let audio;
+ document.addEventListener('pointerdown',e=>{
+  if(!e.target.closest('button,.btn,.tab,.navbtn,.social-btn'))return;
+  try{
+   const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+   audio=audio||new AC();if(audio.state==='suspended')audio.resume();
+   const now=audio.currentTime,osc=audio.createOscillator(),gain=audio.createGain();
+   osc.type='triangle';osc.frequency.setValueAtTime(520,now);osc.frequency.exponentialRampToValueAtTime(340,now+.075);
+   gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(.11,now+.008);gain.gain.exponentialRampToValueAtTime(.0001,now+.095);
+   osc.connect(gain);gain.connect(audio.destination);osc.start(now);osc.stop(now+.105);
+  }catch(_){}
+ },{passive:true});
 })();
 </script>
 
