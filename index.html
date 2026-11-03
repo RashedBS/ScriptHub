@@ -3208,6 +3208,7 @@ document.head.appendChild(sh53);
  const svg=k=>'<svg viewBox="0 0 24 24" aria-hidden="true">'+paths[k]+'</svg>';
  function repair(){
   document.querySelectorAll('button.sh65-edit,button.sh68-edit,button.sh67-edit,button[data-folder-edit],button[data-edit],button.sh65-delete,button.sh68-delete,button.sh67-delete,button.delete-btn,button[data-folder-delete],button[data-folder-script-delete],button[data-delete],button.sh65-copy,button.sh68-copy,button.sh67-copy,button.sh65-close,button.sh68-close,button.sh67-close,#sh54Close').forEach(b=>{
+   if(b.dataset.sh69Repaired==='1')return;
    let kind=(b.matches('.sh65-edit,.sh68-edit,.sh67-edit,[data-folder-edit],[data-edit]'))?'edit':
     (b.matches('.sh65-delete,.sh68-delete,.sh67-delete,.delete-btn,[data-folder-delete],[data-folder-script-delete],[data-delete]'))?'delete':
     (b.matches('.sh65-copy,.sh68-copy,.sh67-copy'))?'copy':'close';
