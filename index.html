@@ -2938,14 +2938,14 @@ document.head.appendChild(sh53);
  // The original folder editor only searches the currently loaded list. Fetch the chosen script directly.
  const oldShow=window.showScript;
  window.showScript=async function(id){
-  let s=(window.scripts||[]).find(x=>String(x.id)===String(id));
-  if(!s&&window.db){
-   const {data,error}=await window.db.from('scripts').select('id,title,description,script_type,visibility,code,owner_id,created_at,folder_id').eq('id',id).maybeSingle();
+  let s=(typeof scripts!=='undefined'?scripts:[]).find(x=>String(x.id)===String(id));
+  if(!s&&typeof db!=='undefined'){
+   const {data,error}=await db.from('scripts').select('id,title,description,script_type,visibility,code,owner_id,created_at,folder_id').eq('id',id).maybeSingle();
    if(error){if(typeof window.toast==='function')window.toast('Could not load script code: '+error.message);return}
    s=data;
   }
   if(!s){if(typeof window.toast==='function')window.toast('Script not found or you do not have permission to view it.');return}
-  if(!(window.scripts||[]).some(x=>String(x.id)===String(s.id))){window.scripts=window.scripts||[];window.scripts.push(s)}
+  if(typeof scripts!=='undefined'&&!scripts.some(x=>String(x.id)===String(s.id)))scripts.push(s);
   if(typeof oldShow==='function')return oldShow.call(this,s.id);
   const title=document.getElementById('viewTitle'),desc=document.getElementById('viewDescription'),meta=document.getElementById('viewMeta'),code=document.getElementById('viewCode');
   if(title&&desc&&meta&&code){title.textContent=s.title;desc.textContent=s.description||'No description';meta.textContent=(s.script_type||'Script')+' · '+(s.visibility==='public'?'Public':'Private');code.textContent=s.code||'';if(typeof window.modal==='function')window.modal('viewModal');return}
