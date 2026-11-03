@@ -3239,3 +3239,53 @@ document.head.appendChild(sh53);
 </script>
 
 </body></html>
+<!-- ScriptHub emergency visual fixes 7.0 -->
+<style id="sh70VisualFixes">
+/* Action buttons: target the actual buttons used in cards and folder rows. */
+button[data-edit],button[data-folder-edit],button[data-edit-script],button.edit-btn{
+ background:#101d35!important;border:1px solid #294d80!important;color:#a9c9ff!important;
+}
+button[data-edit] svg,button[data-folder-edit] svg,button[data-edit-script] svg,button.edit-btn svg{color:inherit!important}
+button[data-delete],button[data-folder-delete],button[data-folder-script-delete],button.delete-btn,button[data-delete-script]{
+ background:#35131b!important;border:1px solid #873344!important;color:#ff8795!important;
+}
+button[data-copy],button.copy-btn,.sh65-copy{
+ background:#102a2a!important;border:1px solid #28635f!important;color:#8be0d4!important;
+}
+/* The challenge popup close control is always pinned to the panel's top-right. */
+#sh54ChallengeModal{box-sizing:border-box!important}
+#sh54ChallengeModal>section{
+ position:relative!important;box-sizing:border-box!important;padding-top:66px!important;
+}
+#sh54ChallengeModal #sh54Close{
+ position:absolute!important;top:12px!important;right:12px!important;left:auto!important;bottom:auto!important;
+ margin:0!important;z-index:999!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;
+ min-width:42px!important;min-height:42px!important;padding:9px 12px!important;
+ background:#32131a!important;border:1px solid #7f3341!important;color:#ff9aa7!important;border-radius:11px!important;
+}
+/* Smooth folder accordion open/close. Keep the content in layout so CSS can animate it. */
+#folderList .folder-contents{
+ display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:7px!important;
+ max-height:0!important;opacity:0!important;transform:translateY(-6px)!important;
+ overflow:hidden!important;visibility:hidden!important;pointer-events:none!important;
+ padding:0 10px!important;margin:0!important;
+ transition:max-height .34s cubic-bezier(.2,.75,.25,1),opacity .22s ease,transform .28s ease,padding .28s ease,visibility 0s linear .34s!important;
+}
+#folderList .folder-accordion.open .folder-contents{
+ max-height:1200px!important;opacity:1!important;transform:translateY(0)!important;
+ visibility:visible!important;pointer-events:auto!important;padding:0 10px 10px!important;
+ transition:max-height .42s cubic-bezier(.2,.75,.25,1),opacity .24s ease,transform .28s ease,padding .28s ease,visibility 0s!important;
+}
+#folderList .folder-chevron{transition:transform .28s cubic-bezier(.2,.75,.25,1)!important}
+#folderList .folder-accordion.open .folder-chevron{transform:rotate(90deg)!important}
+/* Desktop alignment and safe mobile widths. */
+@media(min-width:900px){
+ #folderWorkspace,#folderWorkspace+*,#sh53Toolbar{max-width:1180px;margin-left:auto;margin-right:auto}
+ #folderWorkspace .folder-grid{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+}
+@media(max-width:600px){
+ #sh54ChallengeModal{padding:12px!important}
+ #sh54ChallengeModal>section{max-height:calc(100dvh - 24px)!important;overflow:auto!important;padding:66px 18px 18px!important}
+ #sh54ChallengeModal #sh54Close{top:10px!important;right:10px!important}
+}
+</style>
