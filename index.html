@@ -2860,56 +2860,113 @@ document.head.appendChild(sh53);
 </script>
 
 
+
+
+
 <script>
-/* ScriptHub 6.4 — primary-button hover, challenge close placement, animated folders, view code */
+/* ScriptHub 6.5 — correct folder code loading, dropdown motion, icon actions */
 (function(){
  const css=document.createElement('style');
  css.textContent=`
- .btn.primary,.btn.primary:visited{background:linear-gradient(110deg,#286fce,#1d56ae)!important;color:#fff!important;border:1px solid #4b8ee7!important;box-shadow:0 7px 22px #1765e033}
- .btn.primary:hover,.btn.primary:focus-visible,.btn.primary:active{background:linear-gradient(110deg,#347fe0,#2467c7)!important;color:#fff!important;border-color:#76b0ff!important;box-shadow:0 8px 24px #1765e055!important;filter:none!important}
- .btn.primary:hover{transform:translateY(-1px)}
- #sh54ChallengeModal{overflow-y:auto}
- #sh54ChallengeModal>section{position:relative;padding-top:62px!important}
- #sh54ChallengeModal #sh54Close{position:absolute;top:16px;left:18px;right:auto}
- .folder-contents{display:grid!important;grid-template-rows:0fr;opacity:0;transform:translateY(-5px);transition:grid-template-rows .28s ease,opacity .22s ease,transform .28s ease;overflow:hidden}
- .folder-contents>*{min-height:0}
- .folder-accordion.open .folder-contents{grid-template-rows:1fr;opacity:1;transform:translateY(0)}
- .folder-accordion .folder-chevron{transition:transform .25s ease}
- .folder-accordion.open .folder-chevron{transform:rotate(90deg)}
- .folder-accordion{transition:border-color .22s,background .22s}
- .folder-script-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
- .folder-script-row .folder-script-name{flex:1 1 100px;min-width:0;overflow-wrap:anywhere}
- .folder-script-row [data-folder-view]{flex:0 0 auto}
- @media(prefers-reduced-motion:reduce){.folder-contents,.folder-chevron,.folder-accordion,.btn.primary{transition:none!important;animation:none!important}}
+ /* Folder accordion: animate actual rendered content, not a grid row with multiple implicit children. */
+ #folderList .folder-contents{display:block!important;height:0;max-height:none!important;overflow:hidden;opacity:0;transform:translateY(-5px);padding-top:0;padding-bottom:0;transition:height .3s cubic-bezier(.2,.7,.2,1),opacity .22s ease,transform .28s ease}
+ #folderList .folder-accordion.open .folder-contents{opacity:1;transform:translateY(0)}
+ #folderList .folder-accordion{overflow:hidden;transition:border-color .22s,background .22s}
+ #folderList .folder-chevron{display:inline-block;transition:transform .28s cubic-bezier(.2,.7,.2,1)}
+ #folderList .folder-accordion.open .folder-chevron{transform:rotate(90deg)}
+ #sh54ChallengeModal>section{position:relative;padding-top:58px!important}
+ #sh54ChallengeModal #sh54Close{position:absolute!important;top:14px!important;right:16px!important;left:auto!important;z-index:2}
+ .sh65-icon-action{display:inline-flex!important;align-items:center;justify-content:center;gap:7px;min-width:38px;min-height:36px;padding:8px 10px!important;border-radius:10px!important;font-weight:650}
+ .sh65-icon-action svg{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+ .sh65-close{background:#241216!important;border:1px solid #62313a!important;color:#e6a0a8!important}
+ .sh65-close:hover{background:#351820!important;border-color:#85424c!important}
+ .sh65-delete{background:#35131b!important;border:1px solid #873344!important;color:#ff8795!important}
+ .sh65-delete:hover{background:#4a1723!important;border-color:#c34b61!important}
+ .sh65-edit{background:#101d35!important;border:1px solid #294d80!important;color:#91baff!important}
+ .sh65-edit:hover{background:#17294a!important;border-color:#3e6eb0!important}
+ .sh65-copy{background:#102a2a!important;border:1px solid #28635f!important;color:#8be0d4!important}
+ .sh65-copy:hover{background:#153b39!important;border-color:#398d85!important}
+ .sh65-view{background:#152a46!important;border:1px solid #315c8e!important;color:#c1dcff!important}
+ .sh65-icon-only{min-width:38px!important;width:38px!important;padding:8px!important}
+ @media(prefers-reduced-motion:reduce){#folderList .folder-contents,#folderList .folder-chevron,#folderList .folder-accordion{transition:none!important}}
  `;
  document.head.appendChild(css);
- // Move the challenge close button into the upper-left corner and keep the action row clean.
- function fixChallenge(){
-  const modal=document.getElementById('sh54ChallengeModal');if(!modal)return;
-  const panel=modal.firstElementChild,close=modal.querySelector('#sh54Close');if(!panel||!close)return;
-  close.textContent='Close';close.style.cssText='position:absolute;top:14px;left:16px;right:auto';
-  const row=close.parentElement;
-  if(row&&row!==panel){row.style.justifyContent='flex-end';row.style.marginTop='18px';}
+ const iconPaths={
+  close:'<path d="m18 6-12 12M6 6l12 12"/>',
+  delete:'<path d="M3 6h18M8 6V4h8v2m-11 0 1 14h12l1-14M10 10v6m4-6v6"/>',
+  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/>',
+  copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
+  view:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+  save:'<path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Z"/>'
+ };
+ function svg(name){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(iconPaths[name]||iconPaths.view)+'</svg>'}
+ function iconify(){
+  document.querySelectorAll('button').forEach(b=>{
+   if(b.dataset.sh65Iconified)return;
+   const label=(b.getAttribute('aria-label')||b.title||b.textContent||'').trim().toLowerCase().replace(/\s+/g,' ');
+   let kind='';
+   if(/^close$|^cancel$/.test(label))kind='close';
+   else if(/^delete(?: folder| script| comment)?$|^remove$/.test(label))kind='delete';
+   else if(/^edit$|^edit script$/.test(label))kind='edit';
+   else if(/^copy(?: code)?$|^copy code to clipboard$/.test(label))kind='copy';
+   else if(/^view code$/.test(label))kind='view';
+   if(!kind)return;
+   b.dataset.sh65Iconified='1';b.classList.add('sh65-icon-action','sh65-'+kind,'sh65-icon-only');
+   b.title=label.charAt(0).toUpperCase()+label.slice(1);b.setAttribute('aria-label',b.title);
+   b.innerHTML=svg(kind);
+  });
  }
- document.addEventListener('click',e=>{if(e.target.closest('#sh54Challenge'))setTimeout(fixChallenge,30)},true);
- const challengeObs=new MutationObserver(()=>{if(document.getElementById('sh54ChallengeModal'))fixChallenge()});
- challengeObs.observe(document.body,{childList:true,subtree:true});
- // Add an explicit View code action to each script inside the user's folder accordion.
- function addFolderView(){
-  document.querySelectorAll('#folderList [data-folder-script-delete]').forEach(del=>{
-   const row=del.closest('.folder-script-row');if(!row||row.querySelector('[data-folder-view]'))return;
-   const id=del.dataset.folderScriptDelete;
-   const view=document.createElement('button');view.type='button';view.className='btn small primary';view.textContent='View code';view.dataset.folderView=id;
-   row.insertBefore(view,del);
+ // Ensure a folder's content height is measured after its expanded state changes.
+ function animateFolders(){
+  document.querySelectorAll('#folderList .folder-accordion').forEach(card=>{
+   const content=card.querySelector('.folder-contents');if(!content)return;
+   const open=card.classList.contains('open');
+   if(content.dataset.sh65State===(open?'open':'closed'))return;
+   content.dataset.sh65State=open?'open':'closed';
+   content.style.height=open?'0px':'auto';
+   if(open){content.style.height='0px';requestAnimationFrame(()=>{content.style.height=content.scrollHeight+'px'})}
+   else {content.style.height=content.scrollHeight+'px';requestAnimationFrame(()=>{content.style.height='0px'})}
+  });
+ }
+ document.addEventListener('click',e=>{
+  const close=e.target.closest('#sh54Close');
+  if(close){close.innerHTML=svg('close');close.classList.add('sh65-icon-action','sh65-close','sh65-icon-only');close.title='Close';close.setAttribute('aria-label','Close')}
+ },true);
+ const observer=new MutationObserver(()=>{iconify();animateFolders();});
+ observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+ iconify();animateFolders();
+ // The original folder editor only searches the currently loaded list. Fetch the chosen script directly.
+ const oldShow=window.showScript;
+ window.showScript=async function(id){
+  let s=(window.scripts||[]).find(x=>String(x.id)===String(id));
+  if(!s&&window.db){
+   const {data,error}=await window.db.from('scripts').select('id,title,description,script_type,visibility,code,owner_id,created_at,folder_id').eq('id',id).maybeSingle();
+   if(error){if(typeof window.toast==='function')window.toast('Could not load script code: '+error.message);return}
+   s=data;
+  }
+  if(!s){if(typeof window.toast==='function')window.toast('Script not found or you do not have permission to view it.');return}
+  if(!(window.scripts||[]).some(x=>String(x.id)===String(s.id))){window.scripts=window.scripts||[];window.scripts.push(s)}
+  if(typeof oldShow==='function')return oldShow.call(this,s.id);
+  const title=document.getElementById('viewTitle'),desc=document.getElementById('viewDescription'),meta=document.getElementById('viewMeta'),code=document.getElementById('viewCode');
+  if(title&&desc&&meta&&code){title.textContent=s.title;desc.textContent=s.description||'No description';meta.textContent=(s.script_type||'Script')+' · '+(s.visibility==='public'?'Public':'Private');code.textContent=s.code||'';if(typeof window.modal==='function')window.modal('viewModal');return}
+  if(typeof window.openEditor==='function')return window.openEditor(s);
+ };
+ // Use a dedicated, visible view action within each folder row and delegate reliably.
+ function addViewButtons(){
+  document.querySelectorAll('#folderList [data-folder-edit]').forEach(edit=>{
+   const row=edit.closest('.folder-script-row');if(!row||row.querySelector('[data-folder-view]'))return;
+   const view=document.createElement('button');view.type='button';view.className='btn small sh65-icon-action sh65-view';view.dataset.folderView=edit.dataset.folderEdit;view.innerHTML=svg('view')+'<span>View code</span>';view.title='View code';row.insertBefore(view,edit);
   });
  }
  document.addEventListener('click',e=>{
   const b=e.target.closest('[data-folder-view]');if(!b)return;
-  e.preventDefault();e.stopPropagation();
-  if(typeof window.showScript==='function')window.showScript(b.dataset.folderView);
+  e.preventDefault();e.stopImmediatePropagation();window.showScript(b.dataset.folderView);
  },true);
- const host=document.getElementById('folderList');
- if(host){addFolderView();new MutationObserver(addFolderView).observe(host,{childList:true,subtree:true})}
+ const folderHost=document.getElementById('folderList');
+ if(folderHost)new MutationObserver(()=>{addViewButtons();animateFolders();iconify()}).observe(folderHost,{childList:true,subtree:true});
+ addViewButtons();
+ // Iconify actions after labels are inserted by existing renderers.
+ setTimeout(iconify,100);setTimeout(iconify,700);
 })();
 </script>
 
